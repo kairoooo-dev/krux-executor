@@ -61,7 +61,7 @@ function Show-Logo {
     Write-Host "${BOLD}${CYAN}            ##%%@@%%##   K R U X   ##%%@@%%##${NC}"
     Write-Host ""
     Write-Host "${CYAN}    ================================================================${NC}"
-    Write-Host "${CYAN}                   KRUX Executor Installer v2.0${NC}"
+    Write-Host "${CYAN}                   KRUX Executor Installer v3.0${NC}"
     Write-Host "${CYAN}    ================================================================${NC}"
     Write-Host ""
 }
@@ -84,13 +84,13 @@ Write-Host "${CYAN}[~]${NC} Checking for updates..."
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $r = Invoke-RestMethod -Uri "https://api.github.com/repos/kairoooo-dev/krux-executor/releases/latest" -UseBasicParsing
 $a = $r.assets | Where-Object { $_.name -like "*.exe" } | Select-Object -First 1
-$a2 = $r.assets | Where-Object { $_.name -like "executor.dll" } | Select-Object -First 1
+$a2 = $r.assets | Where-Object { $_.name -like "Xeno.dll" } | Select-Object -First 1
 if (-not $a) { Write-Host "${RED}[-] No exe found${NC}"; exit 1 }
 
 $d = Join-Path $env:LOCALAPPDATA KRUX
 New-Item -ItemType Directory -Path $d -Force | Out-Null
 $f = Join-Path $env:TEMP "KruxExecutor.exe"
-$f2 = Join-Path $env:TEMP "executor.dll"
+$f2 = Join-Path $env:TEMP "Xeno.dll"
 
 Write-Host "${CYAN}[~]${NC} Version: $($r.tag_name)"
 Write-Host "${CYAN}[~]${NC} Exe: $([math]::Round($a.size/1MB,1)) MB  DLL: $([math]::Round($a2.size/1KB,0)) KB"
@@ -138,14 +138,14 @@ Write-Host "${GREEN}[+] Download complete!${NC}"
 # Download executor.dll
 if ($a2) {
     Write-Host ""
-    Write-Host "${CYAN}[~]${NC} Downloading executor.dll..."
+    Write-Host "${CYAN}[~]${NC} Downloading Xeno.dll..."
     try {
         $wc2 = New-Object System.Net.WebClient
         $wc2.Headers.Add("User-Agent", "KRUX")
         $wc2.DownloadFile($a2.browser_download_url, $f2)
-        Write-Host "${GREEN}[+] executor.dll downloaded!${NC}"
+        Write-Host "${GREEN}[+] Xeno.dll downloaded!${NC}"
     } catch {
-        Write-Host "${RED}[-] Failed to download executor.dll: $_${NC}"
+        Write-Host "${RED}[-] Failed to download Xeno.dll: $_${NC}"
     }
 }
 
@@ -153,7 +153,7 @@ if ($a2) {
 Copy-Item $f (Join-Path $d "KruxExecutor.exe") -Force
 Remove-Item $f -Force -ErrorAction SilentlyContinue
 if (Test-Path $f2) {
-    Copy-Item $f2 (Join-Path $d "executor.dll") -Force
+    Copy-Item $f2 (Join-Path $d "Xeno.dll") -Force
     Remove-Item $f2 -Force -ErrorAction SilentlyContinue
 }
 
