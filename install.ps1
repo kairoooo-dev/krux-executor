@@ -65,10 +65,11 @@ function Show-Banner {
 
         Add-Type -AssemblyName System.Drawing
         $img = [System.Drawing.Bitmap]::FromFile($tmpLogo)
-        $width = 48
-        $height = [math]::Floor($img.Height * ($width / $img.Width) * 0.5)
+        $width = 60
+        $height = [math]::Floor($img.Height * ($width / $img.Width) * 0.45)
         $resized = New-Object System.Drawing.Bitmap($img, $width, $height)
 
+        $chars = @(' ', '.', ':', '-', '=', '+', '*', '#', '%', '@')
         Write-Host ""
         for ($y = 0; $y -lt $resized.Height; $y++) {
             $line = ""
@@ -76,10 +77,12 @@ function Show-Banner {
                 $px = $resized.GetPixel($x, $y)
                 $r = $px.R; $g = $px.G; $b = $px.B
                 $brightness = ($r + $g + $b) / 3
-                if ($brightness -lt 30) {
-                    $line += "  "
+                $idx = [math]::Min([math]::Floor($brightness / 25.6), 9)
+                $ch = $chars[$idx]
+                if ($ch -eq ' ') {
+                    $line += " "
                 } else {
-                    $line += "${ESC}[38;2;${r};${g};${b}m${ESC}[48;2;${r};${g};${b}m  ${NC}"
+                    $line += "${ESC}[38;2;${r};${g};${b}m${ch}${NC}"
                 }
             }
             Write-Host $line
@@ -90,13 +93,14 @@ function Show-Banner {
         Write-Host "${BOLD}${CYAN}"
         @'
 
-     %##%##%##%%##%%##%%##%%##%%##%%##%%##%%##%%##%%##%%##%
-     #%      #%    #%  #%#%#%#  #%#%#%#%#  #%      #%#
-     #%  #%  #%  #%#%  #%      #%      #%  #%  #%  #%#
-     #%  #%#%#%  #%#%  #%#%#%#  #%#%#%#%#  #%#%#%#  #%#
-     #%  #%  #%  #%#%  #%      #%      #%  #%  #%  #%#
-     #%      #%    #%  #%#%#%#  #%#%#%#%#  #%      #%#
-     %##%##%##%%##%%##%%##%%##%%##%%##%%##%%##%%##%%##%%##%
+     .:#%@@@%#:.
+     %@       @%
+     @%  %@%  %@
+     @%  %@%  %@
+     %@       @%
+     ':%#%@%@#%:'
+
+     K R U X
 
 '@ | Write-Host
     } finally {
