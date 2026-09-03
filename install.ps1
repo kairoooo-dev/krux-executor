@@ -149,6 +149,27 @@ if ($a2) {
     }
 }
 
+# Xeno engine runtime DLLs (MinGW, required next to Xeno.dll)
+$runtimeDlls = @("libwinpthread-1.dll", "zlib1.dll")
+foreach ($dllName in $runtimeDlls) {
+    $ra = $r.assets | Where-Object { $_.name -eq $dllName } | Select-Object -First 1
+    if ($ra) {
+        $rf = Join-Path $env:TEMP $dllName
+        try {
+            $wcx = New-Object System.Net.WebClient
+            $wcx.Headers.Add("User-Agent", "KRUX")
+            $wcx.DownloadFile($ra.browser_download_url, $rf)
+            Copy-Item $rf (Join-Path $d $dllName) -Force
+            Remove-Item $rf -Force -ErrorAction SilentlyContinue
+            Write-Host "${GREEN}[+] $dllName installed!${NC}"
+        } catch {
+            Write-Host "${RED}[-] Failed to download $dllName (KRUX will crash on Attach without it): $_${NC}"
+        }
+    } else {
+        Write-Host "${RED}[-] Release has no $dllName asset${NC}"
+    }
+}
+
 # Install
 Copy-Item $f (Join-Path $d "KruxExecutor.exe") -Force
 Remove-Item $f -Force -ErrorAction SilentlyContinue
