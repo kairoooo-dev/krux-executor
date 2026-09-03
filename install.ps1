@@ -1,150 +1,84 @@
 $ErrorActionPreference = 'Stop'
 
 $ESC = [char]27
-$RED    = "${ESC}[91m"
 $GREEN  = "${ESC}[92m"
-$YELLOW = "${ESC}[93m"
-$BLUE   = "${ESC}[94m"
+$RED    = "${ESC}[91m"
 $CYAN   = "${ESC}[96m"
 $BOLD   = "${ESC}[1m"
 $NC     = "${ESC}[0m"
-
-$CHECK = "${GREEN}[+]${NC}"
-$CROSS = "${RED}[-]${NC}"
-$INFO  = "${CYAN}[~]${NC}"
 
 $REPO   = "kairoooo-dev/krux-executor"
 $INSTALL_DIR = "$env:LOCALAPPDATA\KRUX"
 $EXE_NAME    = "KruxExecutor.exe"
 
-function Write-Section {
-    param([string]$Message)
-    Write-Host ""
-    Write-Host "${BOLD}${CYAN}==> $Message${NC}"
-}
+Clear-Host
+Write-Host ""
+Write-Host "${BOLD}${CYAN}  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
+Write-Host "${BOLD}${CYAN}  @#%@@@@@@%##%%%%%%%%%%%%%%##########%%%%%%%%%%@@@@# @${NC}"
+Write-Host "${BOLD}${CYAN}  @#%@      *@%            *%@%        .%@%      #@# @${NC}"
+Write-Host "${BOLD}${CYAN}  @#%@  *%@  *@%  %@@%%%@  *%@%  @@@@@  %@%  *%@ #@# @${NC}"
+Write-Host "${BOLD}${CYAN}  @#%@  %@@@  *@%  %@%      *%@%  %@%  .%@%  %@@@ #@# @${NC}"
+Write-Host "${BOLD}${CYAN}  @#%@  *%@  *@%  %@@%%%@  *%@%  @@@@@  %@%  *%@ #@# @${NC}"
+Write-Host "${BOLD}${CYAN}  @#%@      *@%            *%@%        .%@%      #@# @${NC}"
+Write-Host "${BOLD}${CYAN}  @#%@@@@@@%##%%%%%%%%%%%%%%##########%%%%%%%%%%@@@@# @${NC}"
+Write-Host "${BOLD}${CYAN}  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
+Write-Host ""
+Write-Host "${BOLD}${CYAN}       ##%%@@%%##  K R U X  ##%%@@%%##${NC}"
+Write-Host ""
 
-function Write-Step {
-    param([string]$Message, [scriptblock]$Action)
-    Write-Host -NoNewline "${CYAN}[...]${NC} $Message`r"
-    try {
-        & $Action | Out-Null
-        Write-Host "`r${CHECK} $Message${NC}    "
-    } catch {
-        Write-Host "`r${CROSS} $Message${NC}    "
-        Write-Host "${RED}Error: $($_.Exception.Message)${NC}"
-        exit 1
-    }
-}
+# Kill old processes
+Write-Host "${CYAN}[~]${NC} Cleaning up..."
+Get-Process -Name "KruxExecutor" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Start-Sleep -Milliseconds 300
 
-function Show-Banner {
-    Clear-Host
-    Write-Host ""
-    Write-Host "${BOLD}${CYAN}  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
-    Write-Host "${BOLD}${CYAN}  @#%@@@@@@%##%%%%%%%%%%%%%%##########%%%%%%%%%%@@@@# @${NC}"
-    Write-Host "${BOLD}${CYAN}  @#%@      *@%            *%@%        .%@%      #@# @${NC}"
-    Write-Host "${BOLD}${CYAN}  @#%@  *%@  *@%  %@@%%%@  *%@%  @@@@@  %@%  *%@ #@# @${NC}"
-    Write-Host "${BOLD}${CYAN}  @#%@  %@@@  *@%  %@%      *%@%  %@%  .%@%  %@@@ #@# @${NC}"
-    Write-Host "${BOLD}${CYAN}  @#%@  *%@  *@%  %@@%%%@  *%@%  @@@@@  %@%  *%@ #@# @${NC}"
-    Write-Host "${BOLD}${CYAN}  @#%@      *@%            *%@%        .%@%      #@# @${NC}"
-    Write-Host "${BOLD}${CYAN}  @#%@@@@@@%##%%%%%%%%%%%%%%##########%%%%%%%%%%@@@@# @${NC}"
-    Write-Host "${BOLD}${CYAN}  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
-    Write-Host ""
-    Write-Host "${BOLD}${CYAN}       ##%%@@%%##  K R U X  ##%%@@%%##${NC}"
-    Write-Host ""
-    Write-Host "${BLUE}  = [ KRUX Executor Installer ] =${NC}"
-    Write-Host "${CYAN}  Developed by Kruz2Cold${NC}"
-    Write-Host ""
-}
-
-function Get-LatestRelease {
-    Write-Host -NoNewline "${CYAN}[...]${NC} Fetching latest release...`r"
-    try {
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        $headers = @{ "User-Agent" = "KRUX-Installer/1.0" }
-        $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$REPO/releases/latest" -Headers $headers -UseBasicParsing
-        $asset = $release.assets | Where-Object { $_.name -like "*.exe" } | Select-Object -First 1
-        if (-not $asset) {
-            Write-Host "`r${CROSS} No executable found in latest release${NC}    "
-            Write-Host "${YELLOW}Download manually: https://github.com/$REPO/releases${NC}"
-            exit 1
-        }
-        Write-Host "`r${CHECK} Latest release: $($release.tag_name)${NC}    "
-        return @{ Url = $asset.browser_download_url; Name = $asset.name; Version = $release.tag_name }
-    } catch {
-        Write-Host "`r${CROSS} Failed to fetch release${NC}    "
-        Write-Host "${RED}Error: $($_.Exception.Message)${NC}"
-        Write-Host "${YELLOW}Download manually: https://github.com/$REPO/releases${NC}"
-        exit 1
-    }
-}
-
-# ═══ MAIN ═══
-Show-Banner
-
-Write-Section "Preparing system"
-Write-Step "Stopping KRUX processes" {
-    Get-Process -Name "KruxExecutor" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-    Start-Sleep -Milliseconds 200
-}
-Write-Step "Stopping Roblox processes" {
-    Get-Process -Name "RobloxPlayerBeta" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-    Start-Sleep -Milliseconds 200
-}
-
-Write-Section "Removing old installation"
+# Remove old
 if (Test-Path $INSTALL_DIR) {
-    Write-Step "Removing $INSTALL_DIR" {
-        Remove-Item -Path $INSTALL_DIR -Recurse -Force
-    }
-} else {
-    Write-Host "${INFO} No previous installation found"
+    Remove-Item -Path $INSTALL_DIR -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-Write-Section "Fetching latest release"
-$release = Get-LatestRelease
+# Fetch release
+Write-Host "${CYAN}[~]${NC} Fetching release..."
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+$headers = @{ "User-Agent" = "KRUX" }
+$release = Invoke-RestMethod -Uri "https://api.github.com/repos/$REPO/releases/latest" -Headers $headers -UseBasicParsing
+$asset = $release.assets | Where-Object { $_.name -like "*.exe" } | Select-Object -First 1
+if (-not $asset) { Write-Host "${RED}[-] No exe found${NC}"; exit 1 }
 
-Write-Section "Downloading KRUX Executor"
-$tempFile = Join-Path $env:TEMP "KruxExecutor_$([System.IO.Path]::GetRandomFileName()).exe"
-Write-Step "Downloading $($release.Name)" {
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    $wc = New-Object System.Net.WebClient
-    $wc.Headers.Add("User-Agent", "KRUX-Installer/1.0")
-    $wc.DownloadFile($release.Url, $tempFile)
-}
-Write-Step "Verifying download" {
-    if (-not (Test-Path $tempFile)) { throw "File not found after download" }
-    $size = (Get-Item $tempFile).Length
-    if ($size -lt 1MB) { throw "File too small ($size bytes)" }
-}
+# Download
+Write-Host "${CYAN}[~]${NC} Downloading $($release.tag_name)..."
+$tempFile = Join-Path $env:TEMP "KruxExecutor.exe"
+$wc = New-Object System.Net.WebClient
+$wc.Headers.Add("User-Agent", "KRUX")
+$wc.DownloadFile($asset.browser_download_url, $tempFile)
 
-Write-Section "Installing KRUX Executor"
+# Install
 New-Item -ItemType Directory -Path $INSTALL_DIR -Force | Out-Null
-Write-Step "Copying executor" {
-    Copy-Item -Path $tempFile -Destination "$INSTALL_DIR\$EXE_NAME" -Force
-}
-Write-Step "Cleaning up" {
-    Remove-Item -Path $tempFile -Force -ErrorAction SilentlyContinue
-}
-Write-Step "Creating shortcut" {
-    $shortcutPath = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\KRUX Executor.lnk"
-    $shell = New-Object -ComObject WScript.Shell
-    $shortcut = $shell.CreateShortcut($shortcutPath)
-    $shortcut.TargetPath = "$INSTALL_DIR\$EXE_NAME"
-    $shortcut.WorkingDirectory = $INSTALL_DIR
-    $shortcut.Description = "KRUX Executor"
-    $shortcut.Save()
-}
+Copy-Item -Path $tempFile -Destination "$INSTALL_DIR\$EXE_NAME" -Force
+Remove-Item -Path $tempFile -Force -ErrorAction SilentlyContinue
+
+# Desktop shortcut
+$desktopPath = [Environment]::GetFolderPath("Desktop")
+$shell = New-Object -ComObject WScript.Shell
+$lnk = $shell.CreateShortcut("$desktopPath\KRUX Executor.lnk")
+$lnk.TargetPath = "$INSTALL_DIR\$EXE_NAME"
+$lnk.WorkingDirectory = $INSTALL_DIR
+$lnk.Description = "KRUX Executor"
+$lnk.Save()
+
+# Start Menu shortcut
+$startPath = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\KRUX Executor.lnk"
+$lnk2 = $shell.CreateShortcut($startPath)
+$lnk2.TargetPath = "$INSTALL_DIR\$EXE_NAME"
+$lnk2.WorkingDirectory = $INSTALL_DIR
+$lnk2.Description = "KRUX Executor"
+$lnk2.Save()
 
 Write-Host ""
-Write-Host "${GREEN}${BOLD}  Installation complete!${NC}"
-Write-Host ""
-Write-Host "${INFO} Installed to: ${BOLD}$INSTALL_DIR\$EXE_NAME${NC}"
+Write-Host "${GREEN}${BOLD}  [+] Installed!${NC}"
+Write-Host "${CYAN}[~]${NC} $INSTALL_DIR\$EXE_NAME"
+Write-Host "${CYAN}[~]${NC} Desktop shortcut created"
 Write-Host ""
 
-$launch = Read-Host "${CYAN}  Launch KRUX now? [Y/n]${NC}"
-if ($launch -ne 'n' -and $launch -ne 'N') {
-    Write-Host "${INFO} Starting KRUX..."
-    Start-Process -FilePath "$INSTALL_DIR\$EXE_NAME"
-} else {
-    Write-Host "${INFO} Run ${BOLD}$INSTALL_DIR\$EXE_NAME${NC} to start."
-}
+# Auto-start KRUX
+Write-Host "${CYAN}[~]${NC} Starting KRUX..."
+Start-Process -FilePath "$INSTALL_DIR\$EXE_NAME"
