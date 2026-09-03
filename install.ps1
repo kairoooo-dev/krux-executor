@@ -8,8 +8,69 @@ $CYAN   = "${ESC}[96m"
 $BOLD   = "${ESC}[1m"
 $NC     = "${ESC}[0m"
 
+# ═══ Render logo image as colored text ═══
+function Show-Logo {
+    $logoUrl = "https://raw.githubusercontent.com/kairoooo-dev/krux-executor/master/gui-dotnet/KruxLogo.jpg"
+    $tmpLogo = Join-Path $env:TEMP "krux_banner.jpg"
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        $wc = New-Object System.Net.WebClient
+        $wc.Headers.Add("User-Agent", "KRUX")
+        $wc.DownloadFile($logoUrl, $tmpLogo)
+
+        Add-Type -AssemblyName System.Drawing
+        $img = [System.Drawing.Bitmap]::FromFile($tmpLogo)
+        $w = 64
+        $h = [math]::Floor($img.Height * ($w / $img.Width) * 0.45)
+        $resized = New-Object System.Drawing.Bitmap($img, $w, $h)
+
+        Write-Host ""
+        for ($y = 0; $y -lt $resized.Height; $y++) {
+            $line = ""
+            for ($x = 0; $x -lt $resized.Width; $x++) {
+                $px = $resized.GetPixel($x, $y)
+                $r = $px.R; $g = $px.G; $b = $px.B
+                $bright = ($r + $g + $b) / 3
+                if ($bright -lt 25) {
+                    $line += " "
+                } else {
+                    $line += "${ESC}[38;2;${r};${g};${b}m${ESC}[48;2;${r};${g};${b}m  ${NC}"
+                }
+            }
+            Write-Host $line
+        }
+        $resized.Dispose()
+        $img.Dispose()
+    } catch {
+        Write-Host "${BOLD}${CYAN}"
+        @'
+
+  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+  @@@@@@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+  @@@@@@@@%@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+  @@@@@@@%@@@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+  @@@@@@@%@@@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+  @@@@@@@@@%@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+  @@@@@@%@@@@@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+  @@@@%@@@@@@@@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+  @@@@@%@@@@@@@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+  @@@@@@@@%@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+  @@@@@@@@@%@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+'@ | Write-Host
+    } finally {
+        if (Test-Path $tmpLogo) { Remove-Item $tmpLogo -Force -ErrorAction SilentlyContinue }
+    }
+    Write-Host "${NC}"
+    Write-Host "${BOLD}${CYAN}            ##%%@@%%##   K R U X   ##%%@@%%##${NC}"
+    Write-Host ""
+    Write-Host "${CYAN}  = [ KRUX Executor Installer ] =${NC}"
+    Write-Host ""
+}
+
 function Show-Bar {
-    param([int]$Pct, [int]$Downloaded, [int]$Total)
+    param([int]$Pct, [long]$Downloaded, [long]$Total)
     $filled = [math]::Floor($Pct / 2)
     $empty = 50 - $filled
     $bar = ("#" * $filled) + ("-" * $empty)
@@ -18,59 +79,10 @@ function Show-Bar {
     Write-Host -NoNewline "`r  [$bar] $Pct%  $curMB/$totalMB MB"
 }
 
-Clear-Host
-Write-Host ""
-Write-Host "${BOLD}${CYAN}  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}  @@@@@@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}  @@@@@@@@%@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}  @@@@@@@%@@@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}  @@@@@@@%@@@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}  @@@@@@@@@%@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}  @@@@@@%@@@@@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}  @@@@%@@@@@@@@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}  @@@@@%@@@@@@@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}  @@@@@@@@%@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}  @@@@@@@@@%@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
-Write-Host ""
-Write-Host "${BOLD}${CYAN}                        @@@@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}                     @@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}                   @@@@@@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}                  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}                 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}                 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}                 @@@@@@@@@@%@@@@@@@@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}                  @@@@@@@@@%@@@@@@@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}                   @@@@@@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}                     @@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}                       @@@@@@@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}                        @@@@@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}                         @@@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}                          @@@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}                           @@@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}                            @@@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}                             @@@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}                              @@@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}                               @@@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}                                @@@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}                                 @@@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}                                  @@@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}                                   @@@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}                                    @@@@@@${NC}"
-Write-Host "${BOLD}${CYAN}                                     @@@@@${NC}"
-Write-Host "${BOLD}${CYAN}                                      @@@@${NC}"
-Write-Host "${BOLD}${CYAN}                                       @@@${NC}"
-Write-Host "${BOLD}${CYAN}                                        @@${NC}"
-Write-Host "${BOLD}${CYAN}                                         @${NC}"
-Write-Host ""
-Write-Host "${BOLD}${CYAN}            ##%%@@%%##   K R U X   ##%%@@%%##${NC}"
-Write-Host ""
-Write-Host "${CYAN}  = [ KRUX Executor Installer ] =${NC}"
-Write-Host ""
-
 # ═══ MAIN ═══
+Clear-Host
+Show-Logo
+
 Write-Host "${CYAN}[~]${NC} Checking for updates..."
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $r = Invoke-RestMethod -Uri "https://api.github.com/repos/kairoooo-dev/krux-executor/releases/latest" -UseBasicParsing
@@ -84,27 +96,19 @@ $f = Join-Path $env:TEMP "KruxExecutor.exe"
 Write-Host "${CYAN}[~]${NC} Version: $($r.tag_name)"
 Write-Host "${CYAN}[~]${NC} Size: $([math]::Round($a.size/1MB,1)) MB"
 Write-Host ""
+Write-Host "${CYAN}[~]${NC} Downloading..."
+Write-Host ""
 
-# Download with progress
 $wc = New-Object System.Net.WebClient
 $wc.Headers.Add("User-Agent", "KRUX")
-
-$done = $false
-$lastPct = -1
-
-$downloadJob = {
-    param($wc, $url, $out)
-    $wc.DownloadFile($url, $out)
-}
-
-$eventData = Register-ObjectEvent -InputObject $wc -EventName DownloadProgressChanged -Action {
-    $Global:currentPct = $Event.SourceEventArgs.ProgressPercentage
-    $Global:currentBytes = $Event.SourceEventArgs.ProgressPercentage * $Global:totalBytes / 100
-}
-
 $Global:totalBytes = $a.size
 $Global:currentPct = 0
 $Global:currentBytes = 0
+
+$ev = Register-ObjectEvent -InputObject $wc -EventName DownloadProgressChanged -Action {
+    $Global:currentPct = $Event.SourceEventArgs.ProgressPercentage
+    $Global:currentBytes = [long]$Event.SourceEventArgs.ProgressPercentage * $Global:totalBytes / 100
+}
 
 $job = Start-Job -ScriptBlock {
     param($url, $out)
@@ -115,14 +119,11 @@ $job = Start-Job -ScriptBlock {
 } -ArgumentList $a.browser_download_url, $f
 
 while ($job.State -eq "Running") {
-    $pct = $Global:currentPct
-    $bytes = $Global:currentBytes
-    Show-Bar -Pct $pct -Downloaded ([int]$bytes) -Total $a.size
+    Show-Bar -Pct $Global:currentPct -Downloaded $Global:currentBytes -Total $a.size
     Start-Sleep -Milliseconds 200
 }
 
-Unregister-Event -SourceIdentifier $eventData -ErrorAction SilentlyContinue
-
+Unregister-Event -SourceIdentifier $ev -ErrorAction SilentlyContinue
 Show-Bar -Pct 100 -Downloaded $a.size -Total $a.size
 Write-Host ""
 Write-Host ""
