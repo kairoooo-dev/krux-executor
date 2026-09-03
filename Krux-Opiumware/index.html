@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KRUX - Windows Roblox Executor</title>
+    <link rel="shortcut icon" href="../KruxWebsite/KruxLogo.jpg" type="image/jpeg">
+    <link rel="icon" href="../KruxWebsite/KruxLogo.jpg" type="image/jpeg">
+    <link rel="apple-touch-icon" href="../KruxWebsite/KruxLogo.jpg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=NATS&family=Poppins:wght@300;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --slogan-font-size: clamp(2rem, 7vw, 60px);
+            --interface-image-width: 700px;
+            --p1: 0;
+            --p2: 0;
+            --p3: 0;
+        }
+
+        .brand-layer, .slogan-title, .scroll-indicator, .scroll-track-capsule, .pattern-container,
+        .glass-mockup-card, .faq-title, .faq-question, .install-title, .install-subtitle,
+        .install-tutorial, .install-note, img {
+            -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;
+            user-select: none; -webkit-user-drag: none;
+        }
+
+        html, body {
+            margin: 0; padding: 0; width: 100%; height: 100%; height: 100dvh;
+            background-color: #0d0d0d; color: #FFFFFF; font-family: 'Poppins', sans-serif;
+            overflow: hidden; position: fixed;
+        }
+
+        .fixed-viewport {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100vh; height: 100dvh;
+            overflow: hidden; z-index: 10; display: flex; justify-content: center;
+            align-items: center; pointer-events: none;
+        }
+
+        .pattern-container {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh;
+            z-index: 1; display: flex; flex-direction: column; gap: 10px;
+            justify-content: center; overflow: hidden; user-select: none; opacity: 0.9;
+        }
+
+        .pattern-row {
+            width: 100%; overflow: hidden; display: flex;
+            justify-content: flex-start; flex-shrink: 0; contain: layout paint;
+        }
+
+        .marquee-track {
+            display: flex; width: max-content; will-change: transform;
+            backface-visibility: hidden; -webkit-backface-visibility: hidden;
+        }
+
+        .to-right { animation: scroll-right 120s linear infinite; }
+        .to-left { animation: scroll-left 120s linear infinite; }
+
+        @keyframes scroll-left {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-50%, 0, 0); }
+        }
+        @keyframes scroll-right {
+            0% { transform: translate3d(-50%, 0, 0); }
+            100% { transform: translate3d(0, 0, 0); }
+        }
+
+        .pattern-text {
+            font-family: 'NATS', sans-serif; font-weight: 500; color: #171717;
+            letter-spacing: 0.25em; margin-right: 0.25em; font-size: 2.2rem;
+            line-height: 1; white-space: nowrap; flex-shrink: 0;
+            text-rendering: optimizeSpeed; -webkit-font-smoothing: antialiased;
+        }
+
+        .layer {
+            position: absolute; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; width: 100%; height: 100%;
+            box-sizing: border-box; will-change: transform, opacity;
+        }
+
+        .brand-layer {
+            z-index: 5; opacity: calc(1 - var(--p2));
+            transform: translate3d(0, calc(var(--p2) * -38vh), 0);
+        }
+
+        .brand-unit {
+            display: flex; align-items: center; justify-content: center;
+            gap: calc(var(--p1) * clamp(10px, 2.5vw, 35px));
+            pointer-events: auto; max-width: 90%;
+        }
+
+        .logo-wrapper {
+            display: flex; justify-content: center; align-items: center;
+            width: clamp(100px, 25vw, 200px); height: auto; aspect-ratio: 1 / 1;
+            transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .logo-wrapper:hover { transform: scale(1.05); }
+
+        .logo-img {
+            width: 100%; height: auto; object-fit: contain; border: 0;
+            border-radius: 16px; mix-blend-mode: screen;
+        }
+
+        .brand-text-container {
+            display: inline-block; max-width: calc(var(--p1) * 650px);
+            opacity: var(--p1); overflow: hidden; white-space: nowrap;
+            transform: translate3d(calc((1 - var(--p1)) * -40px), 0, 0);
+        }
+
+        .brand-text {
+            font-family: 'Poppins', sans-serif; font-weight: 500;
+            font-size: clamp(1.8rem, 6vw, 5rem); color: #FFFFFF;
+            letter-spacing: 0.15em; display: inline-block;
+            vertical-align: middle; line-height: 1;
+        }
+
+        .showcase-layer {
+            z-index: 3; padding: 4vh 24px 15vh 24px;
+            display: flex; flex-direction: column; justify-content: flex-start;
+            align-items: center; gap: 3vh; opacity: var(--p3);
+            transform: translate3d(0, calc((1 - var(--p3)) * 35vh), 0);
+            pointer-events: auto; overflow-y: hidden;
+            height: calc(100vh - 60px); height: calc(100dvh - 60px);
+            top: 60px; -ms-overflow-style: none; scrollbar-width: none;
+        }
+        .showcase-layer::-webkit-scrollbar { display: none; }
+
+        .slogan-title {
+            font-family: 'Poppins', sans-serif; font-weight: 700;
+            font-size: var(--slogan-font-size); line-height: 1.25;
+            letter-spacing: -0.015em; text-align: center;
+            margin: 2vh 0 1vh 0; color: #FFFFFF; filter: none;
+            white-space: pre-line; will-change: transform, opacity;
+        }
+
+        .glass-mockup-card {
+            width: 100%; max-width: var(--interface-image-width);
+            box-sizing: border-box; display: flex; justify-content: center;
+            align-items: center; overflow: hidden;
+            transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+            margin: 0.5vh 0; flex-shrink: 0; will-change: transform, opacity;
+            border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);
+            background: #111113;
+        }
+        .glass-mockup-card:hover { transform: scale(1.025); }
+
+        .mockup-img {
+            width: 100%; height: auto; object-fit: contain; display: block;
+            border: 0; border-radius: 12px; mix-blend-mode: screen;
+        }
+
+        .faq-section {
+            width: 100%; max-width: var(--interface-image-width);
+            margin-top: 4vh; margin-bottom: 4vh;
+            display: flex; flex-direction: column; gap: 1.5rem;
+            box-sizing: border-box; flex-shrink: 0;
+        }
+
+        .faq-title {
+            font-family: 'Poppins', sans-serif; font-weight: 700;
+            font-size: clamp(1.6rem, 4vw, 2.8rem); color: #FFFFFF;
+            text-align: left; margin: 0; letter-spacing: -0.02em;
+        }
+
+        .faq-list { display: flex; flex-direction: column; gap: 12px; }
+
+        .faq-item {
+            width: 100%; border-bottom: 1px solid rgba(255,255,255,0.05);
+            background-color: transparent; border-radius: 0px;
+            transition: background-color 0.4s cubic-bezier(0.16,1,0.3,1),
+                        border-radius 0.4s cubic-bezier(0.16,1,0.3,1),
+                        border-bottom-color 0.4s cubic-bezier(0.16,1,0.3,1);
+            box-sizing: border-box;
+        }
+        .faq-item.active {
+            background-color: #121212; border-radius: 8px; border-bottom-color: transparent;
+        }
+
+        .faq-question {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 18px 16px; cursor: pointer; user-select: none;
+            font-size: clamp(0.9rem, 2vw, 1.15rem); font-weight: 500;
+            color: rgba(255,255,255,0.9);
+            transition: color 0.3s ease, padding-bottom 0.4s cubic-bezier(0.16,1,0.3,1);
+        }
+        .faq-question:hover { color: #FFFFFF; }
+        .faq-item.active .faq-question { padding-bottom: 12px; }
+
+        .faq-arrow {
+            width: 16px; height: 16px; fill: none; stroke: currentColor;
+            stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;
+            transition: transform 0.4s cubic-bezier(0.16,1,0.3,1);
+        }
+        .faq-item.active .faq-arrow { transform: rotate(180deg); }
+
+        .faq-answer {
+            max-height: 0; overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.16,1,0.3,1);
+            background-color: transparent; box-sizing: border-box;
+        }
+
+        .faq-answer-inner {
+            padding: 0 16px 20px 16px;
+            font-size: clamp(0.82rem, 1.8vw, 1rem); line-height: 1.6;
+            color: rgba(255,255,255,0.7); opacity: 0;
+            transform: translate3d(0, -10px, 0);
+            transition: opacity 0.4s cubic-bezier(0.16,1,0.3,1),
+                        transform 0.4s cubic-bezier(0.16,1,0.3,1);
+        }
+        .faq-item.active .faq-answer-inner {
+            opacity: 1; transform: translate3d(0, 0, 0);
+        }
+
+        .install-section {
+            width: 100%; max-width: var(--interface-image-width);
+            margin-top: 4vh; margin-bottom: 12vh;
+            display: flex; flex-direction: column; gap: 1.5rem;
+            box-sizing: border-box; flex-shrink: 0; text-align: left;
+        }
+
+        .install-title {
+            font-family: 'Poppins', sans-serif; font-weight: 700;
+            font-size: clamp(1.6rem, 4vw, 2.8rem); color: #FFFFFF;
+            margin: 0; letter-spacing: -0.02em;
+        }
+
+        .install-instructions { display: flex; flex-direction: column; gap: 6px; }
+
+        .install-subtitle {
+            font-family: 'Poppins', sans-serif; font-weight: 600;
+            font-size: clamp(0.9rem, 2vw, 1.15rem); color: #FFFFFF; margin: 0;
+        }
+
+        .install-tutorial {
+            font-family: 'Poppins', sans-serif; font-weight: 300;
+            font-size: clamp(0.8rem, 1.8vw, 0.95rem); color: #8C8C8C;
+            margin: 0; line-height: 1.5;
+        }
+
+        .tutorial-link {
+            font-family: 'Poppins', sans-serif; font-weight: 500; color: #FFFFFF;
+            text-decoration: none; transition: opacity 0.2s ease, text-decoration 0.2s ease;
+            word-break: break-all;
+        }
+        .tutorial-link:hover { opacity: 0.8; text-decoration: underline; }
+
+        .terminal-box {
+            background-color: #121212; border: 1px solid rgba(255,255,255,0.02);
+            border-radius: 6px; padding: 16px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            gap: 16px; box-sizing: border-box; width: 100%; position: relative;
+            cursor: pointer;
+            transition: transform 0.5s cubic-bezier(0.16,1,0.3,1),
+                        background-color 0.3s ease, border-color 0.3s ease;
+        }
+        .terminal-box:hover {
+            transform: scale(1.01); background-color: #161616;
+            border-color: rgba(255,255,255,0.05);
+        }
+        .terminal-box:active { transform: scale(0.99); }
+
+        .terminal-code {
+            font-family: 'Poppins', sans-serif;
+            font-size: clamp(0.75rem, 2vw, 0.92rem); font-weight: 500;
+            color: #FFFFFF; margin: 0; white-space: nowrap;
+            overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;
+            width: 100%; text-align: left; user-select: text;
+        }
+        .terminal-code::-webkit-scrollbar { display: none; }
+
+        .copy-btn {
+            background: none; border: none; cursor: pointer; padding: 0;
+            display: flex; align-items: center; justify-content: center;
+            color: #FFFFFF; font-size: 1.15rem; position: relative;
+            transition: transform 0.2s ease, opacity 0.2s ease; flex-shrink: 0;
+        }
+        .copy-btn:hover { transform: scale(1.1); }
+        .copy-btn svg { width: 1.1em; height: 1.1em; display: block; }
+
+        .copied-indicator {
+            position: absolute; right: 40px; top: 50%;
+            transform: translateY(-50%) scale(0.9);
+            background-color: #1C1C1E; border: 1px solid rgba(255,255,255,0.05);
+            color: #FFFFFF; font-family: 'Poppins', sans-serif;
+            font-size: 0.75rem; font-weight: 500; padding: 4px 10px;
+            border-radius: 4px; opacity: 0; pointer-events: none;
+            transition: opacity 0.3s cubic-bezier(0.16,1,0.3,1),
+                        transform 0.3s cubic-bezier(0.16,1,0.3,1);
+            white-space: nowrap; z-index: 10;
+        }
+        .copied-indicator.show { opacity: 1; transform: translateY(-50%) scale(1); }
+
+        .install-note {
+            font-family: 'Poppins', sans-serif; font-weight: 300;
+            font-size: clamp(0.78rem, 1.8vw, 0.9rem); color: #8C8C8C;
+            line-height: 1.6; margin: 0;
+        }
+        .note-bold { font-family: 'Poppins', sans-serif; font-weight: 600; color: #FFFFFF; }
+
+        .scroll-indicator {
+            position: absolute; bottom: 40px; display: flex; flex-direction: column;
+            align-items: center; gap: 12px; z-index: 15;
+            opacity: calc(1 - (var(--p1) * 4)); transition: opacity 0.3s ease;
+        }
+
+        .indicator-text {
+            font-size: 0.75rem; text-transform: uppercase;
+            letter-spacing: 0.25em; color: #888888; font-weight: 500;
+        }
+
+        .mouse-icon {
+            width: 22px; height: 36px; border: 2px solid #555555;
+            border-radius: 12px; position: relative;
+        }
+
+        .mouse-wheel {
+            width: 4px; height: 8px; background-color: #A3A3A3;
+            border-radius: 2px; position: absolute; top: 6px; left: 50%;
+            transform: translateX(-50%); animation: bounce 1.8s infinite ease-in-out;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translate3d(-50%, 0, 0); opacity: 0.3; }
+            50% { transform: translate3d(-50%, 6px, 0); opacity: 1; }
+        }
+
+        .scroll-track-capsule {
+            position: fixed; right: 12px; top: 50%; transform: translateY(-50%);
+            width: 4px; height: 120px; background-color: rgba(255,255,255,0.05);
+            border-radius: 2px; z-index: 99; overflow: hidden;
+            cursor: pointer; pointer-events: auto; user-select: none;
+            transition: background-color 0.3s ease, width 0.3s ease;
+        }
+        .scroll-track-capsule:hover {
+            background-color: rgba(255,255,255,0.08); width: 6px;
+        }
+
+        .scroll-thumb {
+            width: 100%; height: 30%; background-color: rgba(255,255,255,0.35);
+            border-radius: 2px; transform: translate3d(0, 0, 0);
+            will-change: transform; cursor: grab;
+            transition: background-color 0.2s ease;
+        }
+        .scroll-thumb:hover { background-color: rgba(255,255,255,0.5); }
+        .scroll-thumb:active { cursor: grabbing; background-color: rgba(255,255,255,0.7); }
+
+        .action-header {
+            position: fixed; top: 14px; right: 14px; display: flex; gap: 10px;
+            z-index: 100; pointer-events: auto;
+            transform: translate3d(0, calc(var(--p2) * -80px), 0);
+            opacity: calc(1 - var(--p2)); will-change: transform, opacity;
+            transition: transform 0.6s cubic-bezier(0.16,1,0.3,1),
+                        opacity 0.6s cubic-bezier(0.16,1,0.3,1);
+        }
+
+        .action-button {
+            display: inline-flex; align-items: center; justify-content: center;
+            gap: 8px; background-color: #121212; color: #FFFFFF;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
+            font-size: 0.82rem; padding: 8px 16px; border-radius: 6px;
+            text-decoration: none;
+            transition: transform 0.8s cubic-bezier(0.16,1,0.3,1),
+                        background-color 0.8s cubic-bezier(0.16,1,0.3,1),
+                        border-color 0.8s cubic-bezier(0.16,1,0.3,1);
+            box-sizing: border-box; border: 1px solid rgba(255,255,255,0.02);
+            cursor: pointer; user-select: none;
+        }
+        .action-button * { pointer-events: none; }
+        .action-button:hover {
+            transform: scale(1.05); background-color: #161616;
+            border-color: rgba(255,255,255,0.08);
+        }
+        .action-button:active { transform: scale(0.98); }
+        .action-button svg { font-size: 1rem; width: 1em; height: 1em; flex-shrink: 0; }
+
+        .brand-badge {
+            position: fixed; top: 14px; left: 14px;
+            display: flex; align-items: center; justify-content: center;
+            gap: 10px; background-color: #121212; padding: 8px 18px;
+            border-radius: 8px; border: 1px solid rgba(255,255,255,0.02);
+            z-index: 100; pointer-events: auto;
+            transform: translate3d(0, calc(var(--p2) * -80px), 0);
+            opacity: calc(1 - var(--p2)); will-change: transform, opacity;
+            cursor: default; height: 38px; box-sizing: border-box;
+            transition: transform 0.6s cubic-bezier(0.16,1,0.3,1),
+                        opacity 0.6s cubic-bezier(0.16,1,0.3,1);
+        }
+        .brand-badge.header-show, .action-header.header-show {
+            transform: translate3d(0, 0, 0) !important;
+            opacity: 1 !important; pointer-events: auto !important;
+        }
+
+        .badge-icon {
+            width: 26px; height: auto; object-fit: contain;
+            margin-right: -2px; border-radius: 4px; mix-blend-mode: screen;
+        }
+
+        .badge-text {
+            font-family: 'Poppins', sans-serif; font-weight: 500;
+            font-size: 0.85rem; color: #FFFFFF; letter-spacing: 0.02em; line-height: 1;
+        }
+
+        .fixed-footer {
+            position: fixed; bottom: 24px; left: 24px; right: 24px;
+            display: flex; justify-content: space-between; align-items: center;
+            font-family: 'Poppins', sans-serif;
+            font-size: clamp(0.72rem, 1.2vw, 0.82rem);
+            color: rgba(255,255,255,0.35); z-index: 90; pointer-events: none;
+            will-change: transform, opacity; transition: opacity 0.3s ease; opacity: 0;
+        }
+        .fixed-footer .footer-left, .fixed-footer .footer-right {
+            pointer-events: auto; user-select: text;
+        }
+
+        @media (max-width: 640px) {
+            .showcase-layer { padding: 2vh 16px 12vh 16px; gap: 2.5vh; }
+            .faq-section { margin-top: 2vh; margin-bottom: 2vh; gap: 1rem; }
+            .install-section { margin-top: 2vh; margin-bottom: 8vh; gap: 1rem; }
+            .brand-badge .badge-text { display: none; }
+            .brand-badge { padding: 8px; width: 38px; justify-content: center; border-radius: 50%; }
+            .fixed-footer { flex-direction: column; gap: 8px; bottom: 16px; left: 16px; right: 16px; text-align: center; }
+        }
+        @media (max-width: 480px) {
+            .action-header { top: 10px; right: 10px; gap: 6px; }
+            .brand-badge { top: 10px; left: 10px; }
+            .action-button span { display: none; }
+            .action-button { padding: 8px; width: 36px; height: 36px; justify-content: center; border-radius: 50%; }
+            .scroll-track-capsule { right: 8px; height: 100px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="brand-badge">
+        <img src="../KruxWebsite/KruxLogo.jpg" alt="KRUX Icon" class="badge-icon" draggable="false">
+        <span class="badge-text">KRUX</span>
+    </div>
+
+    <div class="action-header">
+        <a href="#faq" id="docs-trigger" class="action-button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
+                <path d="M0 0h24v24H0z" fill="none"/>
+                <path fill="#fff" d="M12 2v4q0 1.25.875 2.125T15 9h4v11q0 .825-.587 1.413T17 22H7q-.825 0-1.412-.587T5 20V4q0-.825.588-1.412T7 2zm2 0l5 5h-4q-.425 0-.712-.288T14 6zm-4 17h2q.425 0 .713-.288T13 18t-.288-.712T12 17h-2q-.425 0-.712.288T9 18t.288.713T10 19m0-4h4q.425 0 .713-.288T15 14t-.288-.712T14 13h-4q-.425 0-.712.288T9 14t.288.713T10 15"/>
+            </svg>
+            <span>Features</span>
+        </a>
+        <a href="#install" id="download-trigger" class="action-button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
+                <path d="M0 0h24v24H0z" fill="none"/>
+                <path fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2M7 11l5 5l5-5m-5-7v12"/>
+            </svg>
+            <span>Download</span>
+        </a>
+        <a href="https://discord.gg/krux" target="_blank" class="action-button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
+                <path d="M0 0h24v24H0z" fill="none"/>
+                <path fill="#fff" d="M19.27 5.33C17.94 4.71 16.5 4.26 15 4a.1.1 0 0 0-.07.03c-.18.33-.39.76-.53 1.09a16.1 16.1 0 0 0-4.8 0c-.14-.34-.35-.76-.54-1.09c-.01-.02-.04-.03-.07-.03c-1.5.26-2.93.71-4.27 1.33c-.01 0-.02 0 .03.02c-2.72 4.07-3.47 8.03-3.1 11.95c0 .02.01.04.03.05c1.8 1.32 3.53 2.12 5.24 2.65c.03.01.06 0 .07-.02c.4-.55.76-1.13 1.07-1.74c.02-.04 0-.08-.04-.09c-.57-.22-1.11-.48-1.64-.78c-.04-.02-.04-.08-.01-.11c.11-.08.22-.17.33-.25c.02-.02.05-.02.07-.01c3.44 1.57 7.15 1.57 10.55 0c.02-.01.05-.01.07.01c.11.09.22.17.33.26c.04.03.04.09-.01.11c-.52.31-1.07.56-1.64.78c-.04.01-.05.06-.04.09c.32.61.68 1.19 1.07 1.74c.03.01.06.02.09.01c1.72-.53 3.45-1.33 5.25-2.65c.02-.01.03-.03.03-.05c.44-4.53-.73-8.46-3.1-11.95c-.01-.01-.02-.02-.04-.02M8.52 14.91c-1.03 0-1.89-.95-1.89-2.12s.84-2.12 1.89-2.12c1.06 0 1.9.96 1.89 2.12c0 1.17-.84 2.12-1.89 2.12m6.97 0c-1.03 0-1.89-.95-1.89-2.12s.84-2.12 1.89-2.12c1.06 0 1.9.96 1.89 2.12c0 1.17-.83 2.12-1.89 2.12"/>
+            </svg>
+            <span>Discord</span>
+        </a>
+    </div>
+
+    <div id="viewport-frame" class="fixed-viewport">
+        <div id="pattern-container" class="pattern-container"></div>
+
+        <div class="layer brand-layer">
+            <div class="brand-unit">
+                <div class="logo-wrapper">
+                    <img src="../KruxWebsite/KruxLogo.jpg" alt="KRUX Logo" class="logo-img" draggable="false">
+                </div>
+                <div class="brand-text-container">
+                    <span class="brand-text">KRUX</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="showcase-scroll-pane" class="layer showcase-layer">
+            <h2 class="slogan-title">The Modern
+Windows Executor
+Out There.</h2>
+
+            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:0">
+                <span style="font-family:'Poppins',sans-serif;font-size:0.72rem;font-weight:600;color:#00c850;border:1px solid rgba(0,200,80,0.4);background:rgba(0,200,80,0.08);padding:4px 14px;border-radius:20px">v3.0 &#8226; Xeno bytecode engine</span>
+                <span style="font-family:'Poppins',sans-serif;font-size:0.72rem;font-weight:500;color:#bbb;border:1px solid rgba(255,255,255,0.12);padding:4px 14px;border-radius:20px">Free &amp; open source</span>
+                <span style="font-family:'Poppins',sans-serif;font-size:0.72rem;font-weight:500;color:#bbb;border:1px solid rgba(255,255,255,0.12);padding:4px 14px;border-radius:20px">Windows 10/11 x64</span>
+            </div>
+
+            <div class="glass-mockup-card" style="background:#141418;border:1px solid rgba(255,255,255,0.08);padding:0;overflow:hidden;max-width:750px">
+                <div style="width:100%;background:#1a1a1e;padding:6px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,255,255,0.06)">
+                    <span style="color:#fff;font-weight:bold;font-size:12px;font-family:Poppins,sans-serif">KRUX</span>
+                    <span style="color:#00c850;font-size:10px">&#9679;</span>
+                    <span style="color:#666;font-size:11px;margin-left:8px">Attached &#8226; Xeno engine</span>
+                    <span style="color:#00c850;font-size:10px;margin-left:8px;border:1px solid rgba(0,200,80,0.4);padding:1px 8px;border-radius:8px">v3.0</span>
+                    <span style="margin-left:auto;color:#555;font-size:11px">&#x2014; &#9633; X</span>
+                </div>
+                <div style="display:flex;background:#121216">
+                    <div style="width:28px;background:#101014;display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:8px">
+                        <span style="color:#555;font-size:11px">&#9881;</span>
+                        <span style="color:#555;font-size:11px">&#9654;</span>
+                        <span style="color:#555;font-size:11px">&#9776;</span>
+                    </div>
+                    <div style="flex:1;padding:0">
+                        <div style="display:flex;background:#1c1c20;border-bottom:1px solid rgba(255,255,255,0.04)">
+                            <div style="padding:6px 14px;background:#26202a;color:#ddd;font-size:11px;border-right:1px solid rgba(255,255,255,0.04)">Script &#10005;</div>
+                            <div style="padding:6px 14px;color:#666;font-size:11px;border-right:1px solid rgba(255,255,255,0.04)">+</div>
+                        </div>
+                        <div style="padding:12px 16px;font-family:Consolas,monospace;font-size:12px;color:#c8c8c8;line-height:1.6;min-height:180px">
+                            <span style="color:#569cd6">game</span>:<span style="color:#dcdcaa">GetService</span>(<span style="color:#ce9178">"ReplicatedStorage"</span>).<span style="color:#9cdcfe">Remotes</span>.<span style="color:#9cdcfe">RemoteEvents</span>.<span style="color:#9cdcfe">ToggleComputerGUI</span>:<span style="color:#dcdcaa">FireServer</span>()
+                        </div>
+                    </div>
+                    <div style="width:180px;background:#161619;border-left:1px solid rgba(255,255,255,0.04);padding:8px 10px;font-size:11px;color:#888;font-family:Consolas,monospace">
+                        <div style="color:#666;font-size:10px;margin-bottom:6px;font-family:Poppins,sans-serif;font-weight:600">EXPLORER</div>
+                        <div style="margin-bottom:3px"><span style="color:#555">&#9660;</span> autoexec</div>
+                        <div style="margin-bottom:3px"><span style="color:#555">&#9660;</span> workspace</div>
+                        <div style="margin-bottom:3px;margin-left:12px;color:#666">scripts</div>
+                        <div style="margin-bottom:3px"><span style="color:#555">&#9660;</span> scripts</div>
+                        <div style="margin-left:12px;color:#666">infinite yield.lua</div>
+                        <div style="margin-left:12px;color:#666">UNC test.lua</div>
+                    </div>
+                </div>
+                <div style="background:#101014;padding:4px 10px;display:flex;align-items:center;gap:6px;border-top:1px solid rgba(255,255,255,0.04)">
+                    <span style="color:#555;font-size:10px">&#9881;</span>
+                    <span style="color:#555;font-size:10px">&#9654;</span>
+                    <span style="color:#555;font-size:10px">&#9632;</span>
+                    <span style="color:#00c850;font-size:8px;margin-left:auto;padding:2px 10px;background:rgba(0,200,80,0.15);border-radius:3px">Attach</span>
+                </div>
+            </div>
+
+            <div id="faq" class="faq-section">
+                <h3 class="faq-title">Frequently Asked Questions</h3>
+                <div class="faq-list">
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>Is KRUX free?</span>
+                            <svg class="faq-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </div>
+                        <div class="faq-answer"><div class="faq-answer-inner">Yes. KRUX is completely free and open source. No keys, no ads, no paywalls.</div></div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>Does it work with the latest Roblox update?</span>
+                            <svg class="faq-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </div>
+                        <div class="faq-answer"><div class="faq-answer-inner">KRUX v3 runs an external bytecode engine (Xeno) — nothing is injected into Roblox. Roblox updates can break memory offsets, so if no clients show up after Attach, grab the latest release from GitHub or Discord.</div></div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>Is this undetected?</span>
+                            <svg class="faq-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </div>
+                        <div class="faq-answer"><div class="faq-answer-inner">We do not guarantee bypass of any anti-cheat system. Use at your own discretion.</div></div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>What scripts can I run?</span>
+                            <svg class="faq-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </div>
+                        <div class="faq-answer"><div class="faq-answer-inner">Most Luau scripts work — roughly 75% UNC coverage including HttpSpy, readfile/writefile, getgenv, and Dex-style scripts. Script I/O routes through the built-in local bridge.</div></div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>KRUX crashes when I click Attach. How do I fix it?</span>
+                            <svg class="faq-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </div>
+                        <div class="faq-answer"><div class="faq-answer-inner">Make sure Xeno.dll and libwinpthread-1.dll sit next to KruxExecutor.exe — the installer does this automatically. Then open Roblox, join a game, and click Attach.</div></div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>How do I attach to Roblox?</span>
+                            <svg class="faq-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </div>
+                        <div class="faq-answer"><div class="faq-answer-inner">Open Roblox and join a game, then click "Attach" in KRUX. It detects clients externally — nothing is injected. The client count shows in the bottom bar, and Execute sends your script to every detected client.</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="install" class="install-section">
+                <h3 class="install-title">Install KRUX</h3>
+                <div class="install-instructions">
+                    <p class="install-subtitle">One command to install. One to uninstall.</p>
+                    <p class="install-tutorial">Paste in PowerShell (Admin) and you're good to go.</p>
+                </div>
+
+                <div class="terminal-box" id="terminal-box" title="Click to copy">
+                    <code class="terminal-code">iex (irm https://raw.githubusercontent.com/kairoooo-dev/krux-executor/master/install.ps1)</code>
+                    <button class="copy-btn" id="copy-btn" aria-label="Copy link">
+                        <span class="copied-indicator" id="copied-indicator">Copied!</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
+                            <path d="M0 0h24v24H0z" fill="none"/>
+                            <path fill="#fff" fill-rule="evenodd" d="M11 2.25A2.75 2.75 0 0 0 8.25 5v2c0 .414.336.75.75.75h6a.75.75 0 0 0 .75-.75V5A2.75 2.75 0 0 0 13 2.25zM9.75 5c0-.69.56-1.25 1.25-1.25h2c.69 0 1.25.56 1.25 1.25v1.25h-4.5z" clip-rule="evenodd"/>
+                            <path fill="#fff" d="M6.753 5.105c0-.14-.14-.237-.266-.176A3.5 3.5 0 0 0 4.5 8.085v10.49a3.39 3.39 0 0 0 2.972 3.365c3.007.374 6.049.374 9.056 0a3.39 3.39 0 0 0 2.972-3.365V8.085a3.5 3.5 0 0 0-1.983-3.156c-.127-.061-.267.035-.267.175V7A2.25 2.25 0 0 1 15 9.25H9A2.25 2.25 0 0 1 6.75 7z"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <p class="install-note"><span class="note-bold">Uninstall:</span> Run <code style="background:#1a1a1a;padding:2px 6px;border-radius:3px;font-size:0.85em">iex (irm https://raw.githubusercontent.com/kairoooo-dev/krux-executor/master/uninstall.ps1)</code> in PowerShell.</p>
+                <p class="install-note"><span class="note-bold">Note:</span> KRUX is Windows 10/11 only (x64). The installer pulls the latest v3.x release: KruxExecutor.exe plus the Xeno engine DLL. Make sure to join the <a href="https://discord.gg/krux" target="_blank" class="tutorial-link note-bold">Discord server</a> for updates and support.</p>
+            </div>
+        </div>
+
+        <div class="scroll-indicator">
+            <span class="indicator-text">Scroll to explore</span>
+            <div class="mouse-icon"><div class="mouse-wheel"></div></div>
+        </div>
+    </div>
+
+    <div id="scroll-capsule" class="scroll-track-capsule">
+        <div id="scroll-thumb" class="scroll-thumb"></div>
+    </div>
+
+    <div id="fixed-footer" class="fixed-footer">
+        <div class="footer-left">2026&nbsp;KRUX Executor. All rights reserved.</div>
+        <div class="footer-right">Free &amp; Open Source</div>
+    </div>
+
+    <script>
+        function initBackgroundPattern(){const c=document.getElementById('pattern-container');if(!c)return;c.innerHTML='';const rH=35,g=10,tH=rH+g,sH=window.innerHeight;const rC=Math.ceil(sH/tH)+4;const pS='KRUX'.repeat(120);for(let i=0;i<rC;i++){const row=document.createElement('div');row.className='pattern-row';const track=document.createElement('div');track.className='marquee-track '+(i%2===0?'to-right':'to-left');const dur=120;const delay=-((i*19)%dur);track.style.animationDuration=dur+'s';track.style.animationDelay=delay+'s';const t1=document.createElement('div');t1.className='pattern-text';t1.textContent=pS;const t2=document.createElement('div');t2.className='pattern-text';t2.textContent=pS;track.appendChild(t1);track.appendChild(t2);row.appendChild(track);c.appendChild(row)}}
+        let targetScroll=0,currentScroll=0;const maxScroll=1000;
+        function getMaxPaneScroll(){const p=document.getElementById('showcase-scroll-pane');return p?Math.max(0,p.scrollHeight-p.clientHeight):0}
+        function getUnifiedMaxScroll(){return maxScroll+getMaxPaneScroll()}
+        window.addEventListener('wheel',e=>{targetScroll+=e.deltaY*0.95;targetScroll=Math.max(0,Math.min(targetScroll,getUnifiedMaxScroll()))},{passive:true});
+        let touchStartY=0;
+        window.addEventListener('touchstart',e=>{touchStartY=e.touches[0].clientY},{passive:true});
+        window.addEventListener('touchmove',e=>{const cy=e.touches[0].clientY;const dy=touchStartY-cy;touchStartY=cy;targetScroll+=dy*1.5;targetScroll=Math.max(0,Math.min(targetScroll,getUnifiedMaxScroll()))},{passive:true});
+        window.addEventListener('keydown',e=>{let ks=0;switch(e.key){case'ArrowDown':ks=100;break;case'ArrowUp':ks=-100;break;case'PageDown':ks=400;break;case'PageUp':ks=-400;break;case' ':ks=e.shiftKey?-350:350;break;case'Home':targetScroll=0;return;case'End':targetScroll=getUnifiedMaxScroll();return;default:return}if(ks){e.preventDefault();targetScroll+=ks;targetScroll=Math.max(0,Math.min(targetScroll,getUnifiedMaxScroll()))}});
+        function initDragToScroll(){const cap=document.getElementById('scroll-capsule');const thumb=document.getElementById('scroll-thumb');if(!cap||!thumb)return;let isDragging=false,startY=0,startScroll=0;cap.addEventListener('mousedown',e=>{if(e.button!==0)return;e.preventDefault();isDragging=true;document.body.style.userSelect='none';document.body.style.cursor='grabbing';thumb.style.cursor='grabbing';const rect=cap.getBoundingClientRect();const clickY=e.clientY-rect.top;const tH=rect.height*0.3;const aH=rect.height-tH;let cp=(clickY-tH/2)/aH;cp=Math.max(0,Math.min(cp,1));targetScroll=cp*getUnifiedMaxScroll();startY=e.clientY;startScroll=targetScroll;e.stopPropagation()});window.addEventListener('mousemove',e=>{if(!isDragging)return;const rect=cap.getBoundingClientRect();const dy=e.clientY-startY;const tH=rect.height*0.3;const aH=rect.height-tH;const tTH=getUnifiedMaxScroll();const sd=(dy/aH)*tTH;targetScroll=Math.max(0,Math.min(startScroll+sd,tTH))});window.addEventListener('mouseup',()=>{if(isDragging){isDragging=false;document.body.style.userSelect='';document.body.style.cursor='';thumb.style.cursor='grab'}})}
+        const scrollPane=document.getElementById('showcase-scroll-pane');
+        const badge=document.querySelector('.brand-badge');
+        const actionHeader=document.querySelector('.action-header');
+        const mockupCard=document.querySelector('.glass-mockup-card');
+        const slogan=document.querySelector('.slogan-title');
+        const ease=0.08;let lastScrollValue=0,forceHeaderShow=false;
+        function updateScrollAnimation(){currentScroll+=(targetScroll-currentScroll)*ease;if(Math.abs(targetScroll-currentScroll)<0.02)currentScroll=targetScroll;const sd=currentScroll-lastScrollValue;lastScrollValue=currentScroll;if(currentScroll<150)forceHeaderShow=false;else if(sd<-0.5)forceHeaderShow=true;else if(sd>0.5)forceHeaderShow=false;
+        if(badge){forceHeaderShow?badge.classList.add('header-show'):badge.classList.remove('header-show')}
+        if(actionHeader){forceHeaderShow?actionHeader.classList.add('header-show'):actionHeader.classList.remove('header-show')}
+        if(currentScroll<=maxScroll){const p1=Math.min(Math.max(currentScroll/400,0),1);const p2=Math.min(Math.max((currentScroll-400)/300,0),1);const p3=Math.min(Math.max((currentScroll-600)/400,0),1);document.documentElement.style.setProperty('--p1',p1);document.documentElement.style.setProperty('--p2',p2);document.documentElement.style.setProperty('--p3',p3);if(badge)badge.style.pointerEvents=(forceHeaderShow||(1-p2)>0.1)?'auto':'none';if(actionHeader)actionHeader.style.pointerEvents=(forceHeaderShow||(1-p2)>0.1)?'auto':'none';if(scrollPane){scrollPane.scrollTop=0;scrollPane.style.transform='translate3d(0,'+(1-p3)*35+'vh,0)'}if(slogan){slogan.style.opacity=p3;slogan.style.transform='translate3d(0,'+(1-p3)*30+'px,0)'}if(mockupCard){mockupCard.style.opacity=p3;mockupCard.style.transform='translate3d(0,'+(1-p3)*50+'px,0)'}}else{document.documentElement.style.setProperty('--p1',1);document.documentElement.style.setProperty('--p2',1);document.documentElement.style.setProperty('--p3',1);if(badge)badge.style.pointerEvents=forceHeaderShow?'auto':'none';if(actionHeader)actionHeader.style.pointerEvents=forceHeaderShow?'auto':'none';const ps=currentScroll-maxScroll;if(scrollPane){scrollPane.style.transform='translate3d(0,0,0)';scrollPane.scrollTop=ps}const fd=380;const fp=Math.min(ps/fd,1);if(slogan){slogan.style.opacity=1-fp;slogan.style.transform='translate3d(0,-'+fp*60+'px,0)'}if(mockupCard){mockupCard.style.opacity=1-fp;mockupCard.style.transform='translate3d(0,-'+fp*100+'px,0)'}}
+        const thumb=document.getElementById('scroll-thumb');if(thumb){const aH=120-(120*0.3);const tTH=getUnifiedMaxScroll();const cp=tTH>0?currentScroll/tTH:0;thumb.style.transform='translate3d(0,'+cp*aH+'px,0)'}
+        const footer=document.getElementById('fixed-footer');if(footer){const tH=getUnifiedMaxScroll();const ft=80;const fs=tH-ft;let fo=0;if(currentScroll>fs&&tH>0){fo=Math.pow((currentScroll-fs)/ft,2.5)}footer.style.opacity=fo;footer.style.transform='translate3d(0,'+(1-fo)*15+'px,0)';footer.style.pointerEvents=fo>0.1?'auto':'none'}
+        requestAnimationFrame(updateScrollAnimation)}
+        function initFaqAccordion(){document.querySelectorAll('.faq-item').forEach(item=>{const q=item.querySelector('.faq-question');const a=item.querySelector('.faq-answer');q.addEventListener('click',()=>{const ia=item.classList.contains('active');document.querySelectorAll('.faq-item').forEach(oi=>{oi.classList.remove('active');oi.querySelector('.faq-answer').style.maxHeight='0px'});if(!ia){item.classList.add('active');a.style.maxHeight=a.scrollHeight+'px';setTimeout(()=>{targetScroll=Math.min(targetScroll+50,getUnifiedMaxScroll())},250)}})})}
+        function initClipboardCopy(){const tb=document.getElementById('terminal-box');const ci=document.getElementById('copied-indicator');if(!tb)return;tb.addEventListener('click',()=>{const cmd='iex (irm https://raw.githubusercontent.com/kairoooo-dev/krux-executor/master/install.ps1)';try{const ti=document.createElement('textarea');ti.value=cmd;document.body.appendChild(ti);ti.select();document.execCommand('copy');document.body.removeChild(ti);if(ci){ci.classList.add('show');setTimeout(()=>ci.classList.remove('show'),2000)}}catch(e){console.error(e)}})}
+        function initDownloadScroll(){const db=document.getElementById('download-trigger');if(db)db.addEventListener('click',e=>{e.preventDefault();targetScroll=getUnifiedMaxScroll()})}
+        initBackgroundPattern();initFaqAccordion();initDragToScroll();initClipboardCopy();initDownloadScroll();requestAnimationFrame(updateScrollAnimation);
+        let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{initBackgroundPattern();targetScroll=Math.min(targetScroll,getUnifiedMaxScroll());const ai=document.querySelector('.faq-item.active');if(ai){ai.querySelector('.faq-answer').style.maxHeight=ai.querySelector('.faq-answer').scrollHeight+'px'}},250)});
+    </script>
+</body>
+</html>
