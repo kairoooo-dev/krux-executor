@@ -150,7 +150,7 @@ if ($a2) {
 }
 
 # Xeno engine runtime DLLs (MinGW, required next to Xeno.dll)
-$runtimeDlls = @("libwinpthread-1.dll", "zlib1.dll")
+$runtimeDlls = @("libwinpthread-1.dll")
 foreach ($dllName in $runtimeDlls) {
     $ra = $r.assets | Where-Object { $_.name -eq $dllName } | Select-Object -First 1
     if ($ra) {
