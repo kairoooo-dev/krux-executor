@@ -8,7 +8,6 @@ $CYAN   = "${ESC}[96m"
 $BOLD   = "${ESC}[1m"
 $NC     = "${ESC}[0m"
 
-# ═══ Render logo image as colored text ═══
 function Show-Logo {
     $logoUrl = "https://raw.githubusercontent.com/kairoooo-dev/krux-executor/master/gui-dotnet/KruxLogo.jpg"
     $tmpLogo = Join-Path $env:TEMP "krux_banner.jpg"
@@ -20,7 +19,7 @@ function Show-Logo {
 
         Add-Type -AssemblyName System.Drawing
         $img = [System.Drawing.Bitmap]::FromFile($tmpLogo)
-        $w = 64
+        $w = 56
         $h = [math]::Floor($img.Height * ($w / $img.Width) * 0.45)
         $resized = New-Object System.Drawing.Bitmap($img, $w, $h)
 
@@ -43,29 +42,27 @@ function Show-Logo {
         $img.Dispose()
     } catch {
         Write-Host "${BOLD}${CYAN}"
-        @'
+        @"
 
-  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-  @@@@@@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-  @@@@@@@@%@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-  @@@@@@@%@@@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-  @@@@@@@%@@@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-  @@@@@@@@@%@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-  @@@@@@%@@@@@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-  @@@@%@@@@@@@@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-  @@@@@%@@@@@@@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-  @@@@@@@@%@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-  @@@@@@@@@%@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+       KKKKKKKKKKKKKKK   RRRRRRRRRRRRRRRRR   UUUUUUUUUUU   XXXXXXXXX
+       KKKKKKKKKKKKKKK   RRRRRRRRRRRRRRRRR   UUUUUUUUUUU   XXXXXXXXX
+       KKKKKK            RRRRRR    RRRRRR    UUUUUUUUUUU   XXXXXXXXX
+       KKKKKK            RRRRRR    RRRRRR    UUUU   UUUU   XXXXXXXXX
+       KKKKKK            RRRRRRRRRRRRRRR     UUU    UUUU   XXXXXXXXX
+       KKKKKK            RRRRRR    RRRRR      UUUUUUUUUU   XXXXXXXXX
+       KKKKKKKKKKKKKKK   RRRRRR    RRRRR       UUUUUUUUU   XXXXXXXXX
+       KKKKKKKKKKKKKKK   RRRRRR    RRRRR        UUUUUUUU   XXXXXXXXX
 
-'@ | Write-Host
+"@ | Write-Host
     } finally {
         if (Test-Path $tmpLogo) { Remove-Item $tmpLogo -Force -ErrorAction SilentlyContinue }
     }
     Write-Host "${NC}"
     Write-Host "${BOLD}${CYAN}            ##%%@@%%##   K R U X   ##%%@@%%##${NC}"
     Write-Host ""
-    Write-Host "${CYAN}  = [ KRUX Executor Installer ] =${NC}"
+    Write-Host "${CYAN}    ================================================================${NC}"
+    Write-Host "${CYAN}                   KRUX Executor Installer v2.0${NC}"
+    Write-Host "${CYAN}    ================================================================${NC}"
     Write-Host ""
 }
 
@@ -73,10 +70,10 @@ function Show-Bar {
     param([int]$Pct, [long]$Downloaded, [long]$Total)
     $filled = [math]::Floor($Pct / 2)
     $empty = 50 - $filled
-    $bar = ("#" * $filled) + ("-" * $empty)
+    $bar = ("$" * $filled) + ("-" * $empty)
     $curMB = [math]::Round($Downloaded / 1MB, 1)
     $totalMB = [math]::Round($Total / 1MB, 1)
-    Write-Host -NoNewline "`r  [$bar] $Pct%  $curMB/$totalMB MB"
+    Write-Host -NoNewline "`r    [$bar] $Pct%  $curMB/$totalMB MB"
 }
 
 # ═══ MAIN ═══
@@ -133,6 +130,7 @@ if ($job.JobStateInfo.State -eq "Failed") {
     exit 1
 }
 
+Write-Host ""
 Write-Host "${GREEN}[+] Download complete!${NC}"
 
 # Install
@@ -154,8 +152,10 @@ $lnk2.WorkingDirectory = $d
 $lnk2.Description = "KRUX Executor"
 $lnk2.Save()
 
+Write-Host ""
 Write-Host "${GREEN}[+] Installed to $d${NC}"
 Write-Host "${GREEN}[+] Desktop shortcut created${NC}"
+Write-Host "${GREEN}[+] Start Menu shortcut created${NC}"
 Write-Host ""
 Write-Host "${CYAN}[~]${NC} Starting KRUX..."
 Start-Process (Join-Path $d "KruxExecutor.exe")
