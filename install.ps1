@@ -99,7 +99,7 @@ function Show-Banner {
 
 '@ | Write-Host
     } finally {
-        Remove-Item -Path $tmpLogo -Force -ErrorAction SilentlyContinue
+        if (Test-Path $tmpLogo) { Remove-Item -Path $tmpLogo -Force -ErrorAction SilentlyContinue }
     }
     Write-Host "${NC}"
     Write-Host "${BLUE}=[ KRUX Executor Installer ]=${NC}"
@@ -110,10 +110,13 @@ function Show-Banner {
 function Get-LatestRelease {
     Write-Host -NoNewline "${CYAN}[...]${NC} Fetching latest release...`r"
     try {
-        $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$REPO/releases/latest" -UseBasicParsing
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        $headers = @{ "User-Agent" = "KRUX-Installer/1.0" }
+        $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$REPO/releases/latest" -Headers $headers -UseBasicParsing
         $asset = $release.assets | Where-Object { $_.name -like "*.exe" } | Select-Object -First 1
         if (-not $asset) {
             Write-Host "`r${CROSS} No executable found in latest release${NC}    "
+            Write-Host "${YELLOW}Go to: https://github.com/$REPO/releases${NC}"
             exit 1
         }
         Write-Host "`r${CHECK} Latest release: $($release.tag_name)${NC}    "
@@ -121,6 +124,7 @@ function Get-LatestRelease {
     } catch {
         Write-Host "`r${CROSS} Failed to fetch release${NC}    "
         Write-Host "${RED}Error: $($_.Exception.Message)${NC}"
+        Write-Host "${YELLOW}Go to: https://github.com/$REPO/releases${NC}"
         exit 1
     }
 }
@@ -170,6 +174,13 @@ function Main {
         $wc = New-Object System.Net.WebClient
         $wc.Headers.Add("User-Agent", "KRUX-Installer/1.0")
         $wc.DownloadFile($release.Url, $tempFile)
+    }
+
+    # ── Verify download ──────────────────────────────────────────────────
+    Write-Step "Verifying download" {
+        if (-not (Test-Path $tempFile)) { throw "Downloaded file not found" }
+        $size = (Get-Item $tempFile).Length
+        if ($size -lt 1MB) { throw "File too small ($size bytes), download may be corrupt" }
     }
 
     # ── Install ───────────────────────────────────────────────────────────
