@@ -21,38 +21,18 @@ echo.
 :: Set install directory
 set "KRUX_DIR=%LOCALAPPDATA%\KRUX"
 set "TEMP_DIR=%TEMP%\KRUX_Install"
-set "REPO=kairoooo-dev/krux-executor"
-set "API_URL=https://api.github.com/repos/%REPO%/releases/latest"
+set "TAG=v3.0.2"
+set "BASE_URL=https://github.com/kairoooo-dev/krux-executor/releases/download/%TAG%"
 
 :: Create directories
 if not exist "%KRUX_DIR%" mkdir "%KRUX_DIR%"
 if not exist "%TEMP_DIR%" mkdir "%TEMP_DIR%"
 
-echo     [~] Checking for latest release...
-echo.
-
-:: Get latest release tag and exe download URL
-for /f "tokens=*" %%i in ('curl -s %API_URL% ^| findstr /C:"browser_download_url" ^| findstr /C:".exe" ^| findstr /v /C:".pdb"') do (
-    set "EXE_URL_RAW=%%i"
-)
-for /f "tokens=*" %%i in ('curl -s %API_URL% ^| findstr /C:"tag_name"') do (
-    set "TAG_RAW=%%i"
-)
-
-:: Parse tag name
-for /f "tokens=2 delims=:, " %%a in ("%TAG_RAW%") do set "VERSION=%%~a"
-set "VERSION=%VERSION:"=%"
-
-:: Parse exe URL
-for /f "tokens=2 delims=:," %%a in ("%EXE_URL_RAW%") do set "EXE_URL=%%~a"
-set "EXE_URL=%EXE_URL: =%"
-set "EXE_URL=%EXE_URL:"=%"
-
-echo     [~] Version: %VERSION%
+echo     [~] Version: %TAG%
 echo     [~] Downloading KruxExecutor.exe...
 echo.
 
-curl -L -# -o "%TEMP_DIR%\KruxExecutor.exe" "%EXE_URL%"
+curl -L -# -o "%TEMP_DIR%\KruxExecutor.exe" "%BASE_URL%/KruxExecutor.exe"
 if %errorlevel% neq 0 (
     echo     [-] Failed to download KruxExecutor.exe
     echo     [-] Please check your internet connection and try again
@@ -62,16 +42,8 @@ if %errorlevel% neq 0 (
 echo     [+] KruxExecutor.exe downloaded!
 echo.
 
-:: Download Xeno.dll
 echo     [~] Downloading Xeno.dll...
-for /f "tokens=*" %%i in ('curl -s %API_URL% ^| findstr /C:"browser_download_url" ^| findstr /C:"Xeno.dll"') do (
-    set "XENO_RAW=%%i"
-)
-for /f "tokens=2 delims=:," %%a in ("%XENO_RAW%") do set "XENO_URL=%%~a"
-set "XENO_URL=%XENO_URL: =%"
-set "XENO_URL=%XENO_URL:"=%"
-
-curl -L -# -o "%TEMP_DIR%\Xeno.dll" "%XENO_URL%"
+curl -L -# -o "%TEMP_DIR%\Xeno.dll" "%BASE_URL%/Xeno.dll"
 if %errorlevel% neq 0 (
     echo     [-] Failed to download Xeno.dll
     pause
@@ -80,16 +52,8 @@ if %errorlevel% neq 0 (
 echo     [+] Xeno.dll downloaded!
 echo.
 
-:: Download libwinpthread-1.dll (Xeno runtime dependency)
 echo     [~] Downloading libwinpthread-1.dll...
-for /f "tokens=*" %%i in ('curl -s %API_URL% ^| findstr /C:"browser_download_url" ^| findstr /C:"libwinpthread"') do (
-    set "PTHREAD_RAW=%%i"
-)
-for /f "tokens=2 delims=:," %%a in ("%PTHREAD_RAW%") do set "PTHREAD_URL=%%~a"
-set "PTHREAD_URL=%PTHREAD_URL: =%"
-set "PTHREAD_URL=%PTHREAD_URL:"=%"
-
-curl -L -# -o "%TEMP_DIR%\libwinpthread-1.dll" "%PTHREAD_URL%"
+curl -L -# -o "%TEMP_DIR%\libwinpthread-1.dll" "%BASE_URL%/libwinpthread-1.dll"
 if %errorlevel% neq 0 (
     echo     [-] Failed to download libwinpthread-1.dll
     pause
