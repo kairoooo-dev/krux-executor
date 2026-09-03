@@ -1,10 +1,8 @@
 using System.Diagnostics;
 using System.Drawing.Drawing2D;
-using System.IO.Pipes;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.Json;
 
 namespace KruxExecutor;
 
@@ -29,7 +27,6 @@ class MainForm : Form
     static readonly Color SIDEBAR_BG = Color.FromArgb(20, 20, 24);
     static readonly Color EDITOR_BG = Color.FromArgb(20, 18, 22);
     static readonly Color EXPLORER_BG = Color.FromArgb(22, 22, 26);
-    static readonly Color BTN_BG = Color.FromArgb(40, 38, 42);
     static readonly Color GREEN_DOT = Color.FromArgb(0, 200, 80);
     static readonly Color GREEN = Color.FromArgb(0, 200, 80);
     static readonly Color RED = Color.FromArgb(220, 60, 60);
@@ -39,10 +36,32 @@ class MainForm : Form
     static readonly Color BORDER = Color.FromArgb(40, 40, 44);
     static readonly Color LINE_NUM = Color.FromArgb(80, 75, 85);
 
+    // ── Xeno DLL P/Invoke ──
+    [DllImport("Xeno.dll", CallingConvention = CallingConvention.Cdecl)]
+    static extern void Initialize();
+
+    [DllImport("Xeno.dll", CallingConvention = CallingConvention.Cdecl)]
+    static extern IntPtr GetClients();
+
+    [DllImport("Xeno.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+    static extern void Execute(byte[] scriptSource, string[] clientUsers, int numUsers);
+
+    [DllImport("Xeno.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+    static extern IntPtr Compilable(byte[] scriptSource);
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+    struct ClientInfo
+    {
+        public IntPtr version;
+        public IntPtr name;
+        public int id;
+    }
+
     string exeDir = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\', '/');
     bool attached = false;
     bool autoAttach = true;
     readonly System.Windows.Forms.Timer attachWatcher;
+    readonly System.Windows.Forms.Timer clientPollTimer;
 
     readonly List<string> tabContents = new() { "" };
     readonly List<string> tabNames = new() { "Script" };
@@ -57,6 +76,7 @@ class MainForm : Form
     Panel explorerPanel = null!;
     TreeView explorerTree = null!;
     Panel lineNumberPanel = null!;
+    Label clientLabel = null!;
 
     bool drag = false; Point dragOff;
 
@@ -72,13 +92,12 @@ class MainForm : Form
         try { var asm = typeof(MainForm).Assembly; using var s = asm.GetManifestResourceStream("KruxExecutor.KruxLogo.jpg"); if (s != null) Icon = Icon.FromHandle(new Bitmap(s).GetHicon()); } catch { }
         DoubleBuffered = true;
 
-        // ═══ TITLEBAR (thin, like Solara) ═══
+        // ═══ TITLEBAR ═══
         var tb = new Panel { Dock = DockStyle.Top, Height = 32, BackColor = TITLEBAR_BG };
         tb.MouseDown += (s, e) => { if (e.Button == MouseButtons.Left) { drag = true; dragOff = e.Location; } };
         tb.MouseMove += (s, e) => { if (drag) Location = new Point(Location.X + e.X - dragOff.X, Location.Y + e.Y - dragOff.Y); };
         tb.MouseUp += (s, e) => { drag = false; };
 
-        // Logo + green dot (left side)
         var logoPanel = new Panel { Dock = DockStyle.Left, Width = 120, BackColor = Color.Transparent };
         var tbLogo = new Label { Text = "  KRUX", Font = new Font("Segoe UI", 9.5f, FontStyle.Bold), ForeColor = BRIGHT, Dock = DockStyle.Left, Width = 70, TextAlign = ContentAlignment.MiddleLeft };
         logoPanel.Controls.Add(tbLogo);
@@ -86,27 +105,24 @@ class MainForm : Form
         logoPanel.Controls.Add(statusDot);
         tb.Controls.Add(logoPanel);
 
-        // Window buttons (right side)
         var closeBtn = new Button { Text = "X", Dock = DockStyle.Right, Width = 44, FlatStyle = FlatStyle.Flat, BackColor = Color.Transparent, ForeColor = DIM, Font = new Font("Segoe UI", 8.5f) };
         closeBtn.FlatAppearance.BorderSize = 0;
         closeBtn.Click += (s, e) => Close();
         tb.Controls.Add(closeBtn);
-
         var maxBtn = new Button { Text = "\u25A1", Dock = DockStyle.Right, Width = 30, FlatStyle = FlatStyle.Flat, BackColor = Color.Transparent, ForeColor = DIM, Font = new Font("Segoe UI", 8.5f) };
         maxBtn.FlatAppearance.BorderSize = 0;
         maxBtn.Click += (s, e) => WindowState = WindowState == FormWindowState.Normal ? FormWindowState.Maximized : FormWindowState.Normal;
         tb.Controls.Add(maxBtn);
-
         var minBtn = new Button { Text = "\u2014", Dock = DockStyle.Right, Width = 30, FlatStyle = FlatStyle.Flat, BackColor = Color.Transparent, ForeColor = DIM, Font = new Font("Segoe UI", 8.5f) };
         minBtn.FlatAppearance.BorderSize = 0;
         minBtn.Click += (s, e) => WindowState = FormWindowState.Minimized;
         tb.Controls.Add(minBtn);
 
-        // ═══ TAB STRIP (below titlebar, Solara style) ═══
+        // ═══ TAB STRIP ═══
         tabStrip = new Panel { Dock = DockStyle.Top, Height = 32, BackColor = TAB_BG };
         RefreshTabs();
 
-        // ═══ LEFT SIDEBAR (very narrow, 3 icons) ═══
+        // ═══ LEFT SIDEBAR ═══
         var sidebar = new Panel { Dock = DockStyle.Left, Width = 32, BackColor = SIDEBAR_BG };
         var icons = new[] { "\u2699", "\u25B6", "\u2630" };
         for (int i = 0; i < icons.Length; i++)
@@ -125,7 +141,6 @@ class MainForm : Form
         var exHeader = new Panel { Dock = DockStyle.Top, Height = 26, BackColor = EXPLORER_BG };
         exHeader.Controls.Add(new Label { Text = "  EXPLORER", Font = new Font("Segoe UI", 7.5f, FontStyle.Bold), ForeColor = DIM, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft });
         explorerPanel.Controls.Add(exHeader);
-
         explorerTree = new TreeView { Dock = DockStyle.Fill, BackColor = EXPLORER_BG, ForeColor = TEXT, Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.None, ShowLines = true, ShowPlusMinus = true, ShowRootLines = true, ItemHeight = 22, LineColor = BORDER, HideSelection = false };
         explorerTree.DrawMode = TreeViewDrawMode.OwnerDrawText;
         explorerTree.DrawNode += (s, e) =>
@@ -147,7 +162,7 @@ class MainForm : Form
         LoadExplorerTree();
         explorerPanel.Controls.Add(explorerTree);
 
-        // ═══ BOTTOM BAR (like Solara - thin with icons) ═══
+        // ═══ BOTTOM BAR ═══
         var bottomBar = new Panel { Dock = DockStyle.Bottom, Height = 30, BackColor = SIDEBAR_BG, Padding = new Padding(6, 0, 6, 0) };
         var bottomIcons = new[] { "\u2699", "\u25B6", "\u25A0", "\u27A1" };
         int bx = 4;
@@ -157,24 +172,24 @@ class MainForm : Form
             b.FlatAppearance.BorderSize = 0;
             b.MouseEnter += (s2, e2) => b.ForeColor = TEXT;
             b.MouseLeave += (s2, e2) => b.ForeColor = DIM;
-            b.Click += (s2, e2) => { if (ic == "\u25B6") Execute(); };
+            b.Click += (s2, e2) => { if (ic == "\u25B6") ExecuteScript(); };
             bottomBar.Controls.Add(b);
             bx += 28;
         }
 
-        // Attach button (right side of bottom bar)
         var attachBtn = new Button { Text = "Attach", Dock = DockStyle.Right, Width = 70, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0, 120, 60), ForeColor = Color.White, Font = new Font("Segoe UI", 8f, FontStyle.Bold), Cursor = Cursors.Hand };
         attachBtn.FlatAppearance.BorderSize = 0;
         attachBtn.Click += (s, e) => Attach();
         bottomBar.Controls.Add(attachBtn);
 
-        // Status text (right side)
         statusText = new Label { Text = "Not Attached", Font = new Font("Segoe UI", 7.5f), ForeColor = DIM, Dock = DockStyle.Right, Width = 80, TextAlign = ContentAlignment.MiddleRight };
         bottomBar.Controls.Add(statusText);
 
-        // ═══ LINE NUMBERS + EDITOR ═══
-        var editorPanel = new Panel { Dock = DockStyle.Fill, BackColor = EDITOR_BG };
+        clientLabel = new Label { Text = "Clients: 0", Font = new Font("Segoe UI", 7.5f), ForeColor = DIM, Dock = DockStyle.Right, Width = 80, TextAlign = ContentAlignment.MiddleRight };
+        bottomBar.Controls.Add(clientLabel);
 
+        // ═══ EDITOR ═══
+        var editorPanel = new Panel { Dock = DockStyle.Fill, BackColor = EDITOR_BG };
         lineNumberPanel = new Panel { Dock = DockStyle.Left, Width = 40, BackColor = EDITOR_BG };
         lineNumberPanel.Paint += (s, e) =>
         {
@@ -212,10 +227,10 @@ class MainForm : Form
             lineNumberPanel.Invalidate();
         };
         editor.VScroll += (s, e) => lineNumberPanel.Invalidate();
-        editor.KeyDown += (s, e) => { if (e.Control && e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; Execute(); } };
+        editor.KeyDown += (s, e) => { if (e.Control && e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; ExecuteScript(); } };
         editorPanel.Controls.Add(editor);
 
-        // ═══ OUTPUT PANEL (bottom, collapsible) ═══
+        // ═══ OUTPUT ═══
         outputPanel = new Panel { Dock = DockStyle.Bottom, Height = 80, BackColor = BG, Visible = true };
         var outputHeader = new Panel { Dock = DockStyle.Top, Height = 18, BackColor = TAB_BG, Cursor = Cursors.Hand };
         var outputToggle = new Label { Text = "  Output", Font = new Font("Segoe UI", 7f), ForeColor = DIM, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, Cursor = Cursors.Hand };
@@ -225,7 +240,7 @@ class MainForm : Form
         outputBox = new RichTextBox { Dock = DockStyle.Fill, BackColor = BG, ForeColor = GREEN, Font = new Font("Consolas", 8.5f), BorderStyle = BorderStyle.None, ReadOnly = true, ScrollBars = RichTextBoxScrollBars.Vertical };
         outputPanel.Controls.Add(outputBox);
 
-        // ═══ ASSEMBLE (order matters) ═══
+        // ═══ ASSEMBLE ═══
         Controls.Add(editorPanel);
         Controls.Add(explorerPanel);
         Controls.Add(outputPanel);
@@ -235,10 +250,14 @@ class MainForm : Form
         Controls.Add(tb);
 
         ResumeLayout(false);
-        Log("KRUX Executor ready");
+        Log("KRUX Executor ready (Xeno backend)");
         Log("Auto-attach ON — waiting for Roblox...");
 
-        // ═══ AUTO-ATTACH ═══
+        // ═══ XENO DLL POLLING ═══
+        clientPollTimer = new System.Windows.Forms.Timer { Interval = 2000 };
+        clientPollTimer.Tick += (s, e) => UpdateClientList();
+        clientPollTimer.Start();
+
         attachWatcher = new System.Windows.Forms.Timer { Interval = 2000 };
         attachWatcher.Tick += (s, e) =>
         {
@@ -250,25 +269,13 @@ class MainForm : Form
     }
 
     // ═══════════════════════════════════════════
-    //  TABS (Solara style)
+    //  TABS
     // ═══════════════════════════════════════════
     void RefreshTabs()
     {
         tabStrip.SuspendLayout();
         tabStrip.Controls.Clear();
-
-        // "+" button (leftmost)
-        var addTab = new Button
-        {
-            Text = "+",
-            Dock = DockStyle.Left,
-            Width = 28,
-            FlatStyle = FlatStyle.Flat,
-            BackColor = Color.Transparent,
-            ForeColor = DIM,
-            Font = new Font("Segoe UI", 10f, FontStyle.Bold),
-            Cursor = Cursors.Hand
-        };
+        var addTab = new Button { Text = "+", Dock = DockStyle.Left, Width = 28, FlatStyle = FlatStyle.Flat, BackColor = Color.Transparent, ForeColor = DIM, Font = new Font("Segoe UI", 10f, FontStyle.Bold), Cursor = Cursors.Hand };
         addTab.FlatAppearance.BorderSize = 0;
         addTab.Click += (s, e) =>
         {
@@ -279,53 +286,21 @@ class MainForm : Form
             RefreshTabs();
         };
         tabStrip.Controls.Add(addTab);
-
-        // Tabs (right to left for dock)
         for (int i = tabNames.Count - 1; i >= 0; i--)
         {
             int idx = i;
-            var tab = new Panel
-            {
-                Tag = idx,
-                Dock = DockStyle.Left,
-                Width = 120,
-                BackColor = idx == activeTab ? TAB_ACTIVE : TAB_BG,
-                Cursor = Cursors.Hand
-            };
-
-            var tabLabel = new Label
-            {
-                Text = "  " + tabNames[idx],
-                Font = new Font("Segoe UI", 8f),
-                ForeColor = idx == activeTab ? BRIGHT : DIM,
-                Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Tag = idx
-            };
+            var tab = new Panel { Tag = idx, Dock = DockStyle.Left, Width = 120, BackColor = idx == activeTab ? TAB_ACTIVE : TAB_BG, Cursor = Cursors.Hand };
+            var tabLabel = new Label { Text = "  " + tabNames[idx], Font = new Font("Segoe UI", 8f), ForeColor = idx == activeTab ? BRIGHT : DIM, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, Tag = idx };
             tabLabel.Click += Tab_Click;
             tabLabel.MouseEnter += (s, e) => { if (idx != activeTab) tab.BackColor = TAB_HOVER; };
             tabLabel.MouseLeave += (s, e) => { if (idx != activeTab) tab.BackColor = TAB_BG; };
             tab.Controls.Add(tabLabel);
-
-            var closeBtn = new Button
-            {
-                Text = "x",
-                Dock = DockStyle.Right,
-                Width = 20,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.Transparent,
-                ForeColor = DIM,
-                Font = new Font("Segoe UI", 7f),
-                Tag = idx,
-                Cursor = Cursors.Hand
-            };
-            closeBtn.FlatAppearance.BorderSize = 0;
-            closeBtn.Click += Tab_Close;
-            tab.Controls.Add(closeBtn);
-
+            var closeTab = new Button { Text = "x", Dock = DockStyle.Right, Width = 20, FlatStyle = FlatStyle.Flat, BackColor = Color.Transparent, ForeColor = DIM, Font = new Font("Segoe UI", 7f), Tag = idx, Cursor = Cursors.Hand };
+            closeTab.FlatAppearance.BorderSize = 0;
+            closeTab.Click += Tab_Close;
+            tab.Controls.Add(closeTab);
             tabStrip.Controls.Add(tab);
         }
-
         tabStrip.ResumeLayout(false);
     }
 
@@ -360,100 +335,98 @@ class MainForm : Form
     {
         explorerTree.Nodes.Clear();
         var root = new TreeNode("KRUX") { Tag = exeDir };
-
         var autoexec = Path.Combine(exeDir, "autoexec");
         if (!Directory.Exists(autoexec)) Directory.CreateDirectory(autoexec);
         var aeNode = new TreeNode("autoexec") { Tag = autoexec };
         foreach (var f in Directory.GetFiles(autoexec, "*.lua"))
             aeNode.Nodes.Add(new TreeNode(Path.GetFileName(f)) { Tag = f });
         root.Nodes.Add(aeNode);
-
         var scripts = Path.Combine(exeDir, "scripts");
         if (!Directory.Exists(scripts)) Directory.CreateDirectory(scripts);
         var scNode = new TreeNode("scripts") { Tag = scripts };
         foreach (var f in Directory.GetFiles(scripts, "*.lua"))
             scNode.Nodes.Add(new TreeNode(Path.GetFileName(f)) { Tag = f });
         root.Nodes.Add(scNode);
-
         root.Expand(); aeNode.Expand(); scNode.Expand();
         explorerTree.Nodes.Add(root);
     }
 
     // ═══════════════════════════════════════════
-    //  ATTACH / INJECT / PIPE
+    //  XENO DLL ATTACH
     // ═══════════════════════════════════════════
-    async void Attach()
+    void Attach()
     {
-        statusText.Text = "Searching...";
-        var procs = Process.GetProcessesByName("RobloxPlayerBeta");
-        if (procs.Length == 0) procs = Process.GetProcesses().Where(p => p.ProcessName.ToLower().Contains("roblox")).ToArray();
-        if (procs.Length == 0) { statusText.Text = "Not Found"; Log("Roblox not found"); attachWatcher?.Start(); return; }
-
-        var proc = procs[0];
-        statusText.Text = $"PID {proc.Id}";
-        Log($"Found Roblox PID {proc.Id}");
-
-        string dllPath = Path.Combine(exeDir, "executor.dll");
-        if (!File.Exists(dllPath)) { statusText.Text = "No DLL"; Log($"Missing: {dllPath}"); return; }
-
+        statusText.Text = "Initializing...";
         try
         {
-            await Task.Run(() => InjectDLL(proc.Id, dllPath));
-            await Task.Delay(1000);
+            string dllPath = Path.Combine(exeDir, "Xeno.dll");
+            if (!File.Exists(dllPath)) { statusText.Text = "No DLL"; Log($"Missing: {dllPath}"); return; }
+
+            Initialize();
             attached = true;
             statusDot.ForeColor = GREEN_DOT;
             statusText.Text = "Attached";
             statusText.ForeColor = GREEN_DOT;
-            Log("Attached!");
-            _ = PipeListener();
+            Log("Xeno DLL initialized!");
+            UpdateClientList();
         }
-        catch (Exception ex) { statusText.Text = "Failed"; Log($"Inject failed: {ex.Message}"); }
+        catch (Exception ex) { statusText.Text = "Failed"; Log($"Attach failed: {ex.Message}"); }
     }
 
-    void InjectDLL(int pid, string dllPath)
+    void UpdateClientList()
     {
-        var hProc = OpenProcess(PROCESS_ALL_ACCESS, false, pid);
-        if (hProc == IntPtr.Zero) throw new Exception("OpenProcess failed");
-        var loadAddr = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryW");
-        if (loadAddr == IntPtr.Zero) throw new Exception("LoadLibraryW not found");
-        var pathBytes = Encoding.Unicode.GetBytes(dllPath + '\0');
-        var allocAddr = VirtualAllocEx(hProc, IntPtr.Zero, (uint)pathBytes.Length, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-        if (allocAddr == IntPtr.Zero) throw new Exception("VirtualAllocEx failed");
-        WriteProcessMemory(hProc, allocAddr, pathBytes, pathBytes.Length, out _);
-        CreateRemoteThread(hProc, IntPtr.Zero, 0, loadAddr, allocAddr, 0, out _);
-        CloseHandle(hProc);
-    }
-
-    async Task PipeListener()
-    {
-        while (true)
+        if (!attached) return;
+        try
         {
-            try
+            IntPtr currentPtr = GetClients();
+            if (currentPtr == IntPtr.Zero) { clientLabel.Text = "Clients: 0"; return; }
+            int count = 0;
+            while (true)
             {
-                await using var server = new NamedPipeServerStream("KruxExecutor", PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
-                await server.WaitForConnectionAsync();
-                Log("DLL connected");
-                using var reader = new StreamReader(server, Encoding.UTF8);
-                while (server.IsConnected) { var line = await reader.ReadLineAsync(); if (line == null) break; Log(line); }
+                var client = Marshal.PtrToStructure<ClientInfo>(currentPtr);
+                if (client.name == IntPtr.Zero) break;
+                string name = Marshal.PtrToStringAnsi(client.name) ?? "";
+                if (name == "N/A" || string.IsNullOrEmpty(name)) break;
+                count++;
+                currentPtr += Marshal.SizeOf<ClientInfo>();
             }
-            catch { await Task.Delay(1000); }
+            clientLabel.Text = $"Clients: {count}";
+            if (count > 0 && statusText.Text != "Attached")
+            {
+                statusDot.ForeColor = GREEN_DOT;
+                statusText.Text = "Attached";
+                statusText.ForeColor = GREEN_DOT;
+                attached = true;
+            }
         }
+        catch { }
     }
 
-    void Execute()
+    // ═══════════════════════════════════════════
+    //  EXECUTE
+    // ═══════════════════════════════════════════
+    void ExecuteScript()
     {
         string code = editor.Text;
         if (string.IsNullOrWhiteSpace(code)) return;
         try
         {
-            using var client = new NamedPipeClientStream(".", "KruxExecutor", PipeDirection.Out);
-            client.Connect(3000);
-            using var w = new StreamWriter(client, Encoding.UTF8);
-            w.Write(code);
-            w.Flush();
-            Log($"Executed ({code.Length} chars)");
+            IntPtr currentPtr = GetClients();
+            var users = new List<string>();
+            while (true)
+            {
+                var client = Marshal.PtrToStructure<ClientInfo>(currentPtr);
+                if (client.name == IntPtr.Zero) break;
+                string name = Marshal.PtrToStringAnsi(client.name) ?? "";
+                if (name == "N/A" || string.IsNullOrEmpty(name)) break;
+                users.Add(name);
+                currentPtr += Marshal.SizeOf<ClientInfo>();
+            }
+            if (users.Count == 0) { Log("No clients found"); return; }
+            Execute(Encoding.UTF8.GetBytes(code), users.ToArray(), users.Count);
+            Log($"Executed ({code.Length} chars) -> {users.Count} client(s)");
         }
-        catch (Exception ex) { Log($"Pipe error: {ex.Message}"); }
+        catch (Exception ex) { Log($"Execute error: {ex.Message}"); }
     }
 
     void Log(string msg)
@@ -466,14 +439,4 @@ class MainForm : Form
         outputBox.AppendText($"[{ts}] {msg}\n");
         outputBox.ScrollToCaret();
     }
-
-    const uint PROCESS_ALL_ACCESS = 0x1F0FFF;
-    const uint MEM_COMMIT = 0x1000, MEM_RESERVE = 0x2000, PAGE_READWRITE = 0x04;
-    [DllImport("kernel32.dll")] static extern IntPtr OpenProcess(uint a, bool i, int p);
-    [DllImport("kernel32.dll")] static extern IntPtr GetProcAddress(IntPtr m, string n);
-    [DllImport("kernel32.dll")] static extern IntPtr GetModuleHandle(string n);
-    [DllImport("kernel32.dll")] static extern IntPtr VirtualAllocEx(IntPtr h, IntPtr a, uint s, uint t, uint p);
-    [DllImport("kernel32.dll")] static extern bool WriteProcessMemory(IntPtr h, IntPtr a, byte[] d, int s, out int w);
-    [DllImport("kernel32.dll")] static extern IntPtr CreateRemoteThread(IntPtr h, IntPtr s, uint st, IntPtr sa, IntPtr p, uint f, out IntPtr t);
-    [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr h);
 }
