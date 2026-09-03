@@ -55,24 +55,52 @@ function Write-Step {
 
 function Show-Banner {
     Clear-Host
-    Write-Host "${BOLD}${CYAN}"
-    @'
+    $logoUrl = "https://raw.githubusercontent.com/kairoooo-dev/krux-executor/master/gui-dotnet/KruxLogo.jpg"
+    $tmpLogo = Join-Path $env:TEMP "krux_logo_$([System.IO.Path]::GetRandomFileName()).jpg"
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        $wc = New-Object System.Net.WebClient
+        $wc.Headers.Add("User-Agent", "KRUX-Installer/1.0")
+        $wc.DownloadFile($logoUrl, $tmpLogo)
 
-    ░██████╗░██╗░░██╗░█████╗░░█████╗░██╗░░██╗
-    ██╔════╝░██║░░██║██╔══██╗██╔══██╗██║░░██║
-    ╚█████╗░░███████║██║░░╚═╝██║░░╚═╝███████║
-    ░╚═══██╗██╔══██║██║░░██╗██║░░██╗██╔══██║
-    ██████╔╝██║░░██║╚█████╔╝╚█████╔╝██║░░██║
-    ░╚═════╝░╚═╝░░╚═╝░╚════╝░░╚════╝░╚═╝░░╚═╝
+        Add-Type -AssemblyName System.Drawing
+        $img = [System.Drawing.Bitmap]::FromFile($tmpLogo)
+        $width = 48
+        $height = [math]::Floor($img.Height * ($width / $img.Width) * 0.5)
+        $resized = New-Object System.Drawing.Bitmap($img, $width, $height)
 
-    ░█████╗░██╗░░░██╗██████╗░░█████╗░████████╗
-    ██╔══██╗██║░░░██║██╔══██╗██╔══██╗╚══██╔══╝
-    ██║░░╚═╝██║░░░██║██████╔╝██║░░██║░░░██║░░░
-    ██║░░██╗██║░░░██║██╔══██╗██║░░██║░░░██║░░░
-    ╚█████╔╝╚██████╔╝██║░░██║╚█████╔╝░░░██║░░░
-    ░╚════╝░░╚═════╝░╚═╝░░╚═╝░╚════╝░░░░╚═╝░░░
+        Write-Host ""
+        for ($y = 0; $y -lt $resized.Height; $y++) {
+            $line = ""
+            for ($x = 0; $x -lt $resized.Width; $x++) {
+                $px = $resized.GetPixel($x, $y)
+                $r = $px.R; $g = $px.G; $b = $px.B
+                $brightness = ($r + $g + $b) / 3
+                if ($brightness -lt 30) {
+                    $line += "  "
+                } else {
+                    $line += "${ESC}[38;2;${r};${g};${b}m${ESC}[48;2;${r};${g};${b}m  ${NC}"
+                }
+            }
+            Write-Host $line
+        }
+        $resized.Dispose()
+        $img.Dispose()
+    } catch {
+        Write-Host "${BOLD}${CYAN}"
+        @'
+
+     ██╗  ██╗██╗   ██╗██████╗ ███████╗██████╗ ████████╗
+     ██║ ██╔╝██║   ██║██╔══██╗██╔════╝██╔══██╗╚══██╔══╝
+     █████╔╝ ██║   ██║██████╔╝███████╗██████╔╝   ██║
+     ██╔═██╗ ██║   ██║██╔══██╗╚════██║██╔═══╝    ██║
+     ██║  ██╗╚██████╔╝██║  ██║███████║██║        ██║
+     ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝        ╚═╝
 
 '@ | Write-Host
+    } finally {
+        Remove-Item -Path $tmpLogo -Force -ErrorAction SilentlyContinue
+    }
     Write-Host "${NC}"
     Write-Host "${BLUE}=[ KRUX Executor Installer ]=${NC}"
     Write-Host "${CYAN}Developed by Kruz2Cold${NC}"
