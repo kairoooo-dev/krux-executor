@@ -36,6 +36,10 @@ class MainForm : Form
     static readonly Color BORDER = Color.FromArgb(40, 40, 44);
     static readonly Color LINE_NUM = Color.FromArgb(80, 75, 85);
 
+    // ── Kernel32 P/Invoke ──
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+    static extern bool SetDllDirectory(string lpPathName);
+
     // ── Xeno DLL P/Invoke ──
     [DllImport("Xeno.dll", CallingConvention = CallingConvention.Cdecl)]
     static extern void Initialize();
@@ -82,6 +86,7 @@ class MainForm : Form
 
     public MainForm()
     {
+        SetDllDirectory(exeDir);
         SuspendLayout();
         Text = "KRUX";
         Size = new Size(950, 620);
