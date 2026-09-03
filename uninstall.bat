@@ -1,63 +1,49 @@
 @echo off
 title KRUX Executor Uninstaller
-color 0C
-cls
-echo.
-echo   @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-echo   @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-echo   @@@@@@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-echo   @@@@@@@@%@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-echo   @@@@@@@%@@@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-echo   @@@@@@@%@@@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-echo   @@@@@@@@@%@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-echo   @@@@@@%@@@@@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-echo   @@@@%@@@@@@@@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-echo   @@@@@%@@@@@@@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-echo   @@@@@@@@%@@@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-echo   @@@@@@@@@%@@%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-echo   @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-echo   @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-echo.
-echo                        @@@@@@@@@@@@@@@@@@
-echo                     @@@@@@@@@@@@@@@@@@@@@@@@@
-echo                   @@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-echo                  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-echo                 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-echo                 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-echo                 @@@@@@@@@@%@@@@@@@@@@@@@@@@@@@@@@
-echo                  @@@@@@@@@%@@@@@@@@@@@@@@@@@@@@@
-echo                   @@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-echo                     @@@@@@@@@@@@@@@@@@@@@@@@@
-echo                       @@@@@@@@@@@@@@@@@@@@@
-echo                        @@@@@@@@@@@@@@@@@@@
-echo                         @@@@@@@@@@@@@@@@@
-echo                          @@@@@@@@@@@@@@@@
-echo                           @@@@@@@@@@@@@@@
-echo                            @@@@@@@@@@@@@@
-echo                             @@@@@@@@@@@@@
-echo                              @@@@@@@@@@@@
-echo                               @@@@@@@@@@@
-echo                                @@@@@@@@@@
-echo                                 @@@@@@@@@
-echo                                  @@@@@@@@
-echo                                   @@@@@@@
-echo                                    @@@@@@@
-echo                                     @@@@@@
-echo                                      @@@@@
-echo                                       @@@@
-echo                                        @@@
-echo                                         @@
-echo                                          @
-echo.
-echo            ##%%@@%%##   K R U X   ##%%@@%%##
-echo.
-echo   ==============================
-echo    KRUX Executor Uninstaller
-echo   ==============================
-echo.
-
-powershell -NoProfile -ExecutionPolicy Bypass -Command "try { Get-Process -Name 'KruxExecutor' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 300; $d = Join-Path $env:LOCALAPPDATA KRUX; if (Test-Path $d) { Remove-Item $d -Recurse -Force; Write-Host '  [+] Removed' $d -ForegroundColor Green } else { Write-Host '  [~] No install found' -ForegroundColor Cyan }; $lnk = Join-Path ([Environment]::GetFolderPath('Desktop')) 'KRUX Executor.lnk'; if (Test-Path $lnk) { Remove-Item $lnk -Force; Write-Host '  [+] Removed desktop shortcut' -ForegroundColor Green }; $s = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\KRUX Executor.lnk'; if (Test-Path $s) { Remove-Item $s -Force; Write-Host '  [+] Removed start menu shortcut' -ForegroundColor Green }; Write-Host ''; Write-Host '  KRUX has been uninstalled.' -ForegroundColor Green } catch { Write-Host '  [-] Error:' $_.Exception.Message -ForegroundColor Red }"
+color 0B
+mode con: cols=70 lines=30
 
 echo.
-echo   Press any key to exit...
-pause >nul
+echo     ================================================================
+echo                    KRUX Executor Uninstaller
+echo     ================================================================
+echo.
+
+set "KRUX_DIR=%LOCALAPPDATA%\KRUX"
+
+echo     [~] Removing KRUX from %KRUX_DIR%...
+if exist "%KRUX_DIR%" (
+    rd /s /q "%KRUX_DIR%" 2>nul
+    echo     [+] KRUX removed!
+) else (
+    echo     [-] KRUX not found at %KRUX_DIR%
+)
+echo.
+
+echo     [~] Removing desktop shortcut...
+if exist "%USERPROFILE%\Desktop\KRUX Executor.lnk" (
+    del /f /q "%USERPROFILE%\Desktop\KRUX Executor.lnk" 2>nul
+    echo     [+] Desktop shortcut removed!
+) else (
+    echo     [-] Desktop shortcut not found
+)
+echo.
+
+echo     [~] Removing Start Menu shortcut...
+if exist "%APPDATA%\Microsoft\Windows\Start Menu\Programs\KRUX Executor.lnk" (
+    del /f /q "%APPDATA%\Microsoft\Windows\Start Menu\Programs\KRUX Executor.lnk" 2>nul
+    echo     [+] Start Menu shortcut removed!
+) else (
+    echo     [-] Start Menu shortcut not found
+)
+echo.
+
+echo     ================================================================
+echo                    KRUX Executor uninstalled successfully!
+echo     ================================================================
+echo.
+echo     To reinstall: run install.bat
+echo     Discord: https://discord.gg/krux
+echo.
+
+pause
