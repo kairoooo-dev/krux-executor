@@ -32,7 +32,7 @@ Write-Host "${RED}  = [ KRUX Executor Uninstaller ] =${NC}"
 Write-Host ""
 
 Write-Host -NoNewline "${CYAN}[...]${NC} Stopping KRUX...`r"
-Get-Process -Name "KruxExecutor" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Get-Process -Name "KRUX" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Milliseconds 300
 Write-Host "`r${CHECK} Stopped KRUX${NC}    "
 
