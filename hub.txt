@@ -1,0 +1,8 @@
+# Script Hub index — one script per line: Name<TAB>URL
+# Fetch reads this file, pulls the URL, and merges its entries into the grid.
+# URL can be raw GitHub, pastebin raw, or any plain text the http helper can read.
+# Lines starting with # are ignored. Put real entries below once you have sources:
+#
+# My Hub	https://raw.githubusercontent.com/user/repo/main/hub.txt
+#
+# The grid below will serve whatever you feed it — go fill the walls.

@@ -1,0 +1,14 @@
+bin/
+obj/
+publish/
+publish-krux/
+publish-single/
+*.exe
+*.dll
+*.pdb
+*.cache
+*.user
+*.suo
+.vs/
+.idea/
+*.DotSettings.user
