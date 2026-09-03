@@ -20,32 +20,39 @@ static class Program
 
 class MainForm : Form
 {
+    // ── Theme ──
     static readonly Color BG = Color.FromArgb(30, 30, 30);
-    static readonly Color TITLEBAR = Color.FromArgb(37, 37, 38);
-    static readonly Color EDITOR_BG = Color.FromArgb(30, 30, 30);
-    static readonly Color BTN_BG = Color.FromArgb(50, 50, 52);
-    static readonly Color BTN_BORDER = Color.FromArgb(68, 68, 68);
-    static readonly Color ACCENT = Color.FromArgb(0, 122, 204);
-    static readonly Color GREEN = Color.FromArgb(76, 175, 80);
-    static readonly Color RED = Color.FromArgb(240, 80, 80);
-    static readonly Color TEXT = Color.FromArgb(212, 212, 212);
-    static readonly Color DIM = Color.FromArgb(136, 136, 136);
+    static readonly Color SIDEBAR_BG = Color.FromArgb(24, 24, 28);
+    static readonly Color TITLEBAR = Color.FromArgb(32, 32, 36);
+    static readonly Color TAB_ACTIVE = Color.FromArgb(40, 40, 44);
+    static readonly Color TAB_HOVER = Color.FromArgb(36, 36, 40);
+    static readonly Color EDITOR_BG = Color.FromArgb(28, 28, 32);
+    static readonly Color PANEL_BG = Color.FromArgb(26, 26, 30);
+    static readonly Color BTN_BG = Color.FromArgb(44, 44, 48);
+    static readonly Color ACCENT = Color.FromArgb(0, 150, 80);
+    static readonly Color GREEN = Color.FromArgb(0, 200, 80);
+    static readonly Color RED = Color.FromArgb(220, 60, 60);
+    static readonly Color TEXT = Color.FromArgb(200, 200, 200);
+    static readonly Color DIM = Color.FromArgb(120, 120, 120);
+    static readonly Color BORDER = Color.FromArgb(50, 50, 54);
 
     string exeDir = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\', '/');
     bool attached = false;
+    bool autoAttach = true;
+    readonly System.Windows.Forms.Timer attachWatcher;
+
     readonly List<string> tabContents = new() { "" };
-    readonly List<string> tabNames = new() { "Untitled" };
+    readonly List<string> tabNames = new() { "Script" };
     int activeTab = 0;
 
     RichTextBox editor = null!;
     Panel outputPanel = null!;
     RichTextBox outputBox = null!;
-    Label statusLeft = null!;
-    Label statusRight = null!;
+    Label statusDot = null!;
+    Label statusText = null!;
     Panel tabStrip = null!;
-    Panel searchOverlay = null!;
-    TextBox searchInput = null!;
-    Panel searchResultsPanel = null!;
+    Panel explorerPanel = null!;
+    TreeView explorerTree = null!;
 
     bool drag = false; Point dragOff;
 
@@ -53,8 +60,8 @@ class MainForm : Form
     {
         SuspendLayout();
         Text = "KRUX";
-        Size = new Size(800, 560);
-        MinimumSize = new Size(650, 450);
+        Size = new Size(900, 600);
+        MinimumSize = new Size(700, 450);
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.None;
         BackColor = BG;
@@ -62,13 +69,19 @@ class MainForm : Form
         DoubleBuffered = true;
 
         // ═══ TITLEBAR ═══
-        var tb = new Panel { Dock = DockStyle.Top, Height = 32, BackColor = TITLEBAR };
+        var tb = new Panel { Dock = DockStyle.Top, Height = 36, BackColor = TITLEBAR };
         tb.MouseDown += (s, e) => { if (e.Button == MouseButtons.Left) { drag = true; dragOff = e.Location; } };
         tb.MouseMove += (s, e) => { if (drag) Location = new Point(Location.X + e.X - dragOff.X, Location.Y + e.Y - dragOff.Y); };
         tb.MouseUp += (s, e) => { drag = false; };
 
-        var tbTitle = new Label { Text = "  KRUX", Font = new Font("Segoe UI", 9f, FontStyle.Bold), ForeColor = TEXT, Dock = DockStyle.Left, Width = 70, TextAlign = ContentAlignment.MiddleLeft };
-        tb.Controls.Add(tbTitle);
+        var tbLogo = new Label { Text = "  KRUX", Font = new Font("Segoe UI", 9.5f, FontStyle.Bold), ForeColor = Color.White, Dock = DockStyle.Left, Width = 80, TextAlign = ContentAlignment.MiddleLeft };
+        tb.Controls.Add(tbLogo);
+
+        statusDot = new Label { Text = "\u25CF", Font = new Font("Segoe UI", 10f), ForeColor = RED, Dock = DockStyle.Left, Width = 24, TextAlign = ContentAlignment.MiddleCenter };
+        tb.Controls.Add(statusDot);
+
+        statusText = new Label { Text = "Not Attached", Font = new Font("Segoe UI", 8f), ForeColor = DIM, Dock = DockStyle.Left, Width = 90, TextAlign = ContentAlignment.MiddleLeft };
+        tb.Controls.Add(statusText);
 
         var closeBtn = new Button { Text = "X", Dock = DockStyle.Right, Width = 46, FlatStyle = FlatStyle.Flat, BackColor = Color.Transparent, ForeColor = DIM, Font = new Font("Segoe UI", 9f) };
         closeBtn.FlatAppearance.BorderSize = 0;
@@ -85,47 +98,73 @@ class MainForm : Form
         minBtn.Click += (s, e) => WindowState = FormWindowState.Minimized;
         tb.Controls.Add(minBtn);
 
-        var searchBtn = new Button { Text = "\u2315", Dock = DockStyle.Right, Width = 34, FlatStyle = FlatStyle.Flat, BackColor = Color.Transparent, ForeColor = DIM, Font = new Font("Segoe UI", 10f) };
-        searchBtn.FlatAppearance.BorderSize = 0;
-        searchBtn.Click += (s, e) => ToggleSearch();
-        tb.Controls.Add(searchBtn);
-
         // ═══ TAB STRIP ═══
-        tabStrip = new Panel { Dock = DockStyle.Top, Height = 32, BackColor = TITLEBAR };
+        tabStrip = new Panel { Dock = DockStyle.Top, Height = 34, BackColor = TITLEBAR };
         RefreshTabs();
 
+        // ═══ LEFT SIDEBAR ═══
+        var sidebar = new Panel { Dock = DockStyle.Left, Width = 36, BackColor = SIDEBAR_BG };
+        var sideIcons = new[] { "\u2699", "\u25B6", "\u2630" };
+        for (int i = 0; i < sideIcons.Length; i++)
+        {
+            var btn = new Button { Text = sideIcons[i], Size = new Size(36, 36), FlatStyle = FlatStyle.Flat, BackColor = Color.Transparent, ForeColor = DIM, Font = new Font("Segoe UI", 12f), Dock = DockStyle.Top, Cursor = Cursors.Hand };
+            btn.FlatAppearance.BorderSize = 0;
+            int idx = i;
+            btn.Click += (s, e) => { if (idx == 2) ToggleExplorer(); };
+            sidebar.Controls.Add(btn);
+        }
+        sidebar.Controls.Add(new Panel { Dock = DockStyle.Top, Height = 10, BackColor = SIDEBAR_BG });
+
+        // ═══ EXPLORER PANEL ═══
+        explorerPanel = new Panel { Dock = DockStyle.Right, Width = 200, BackColor = PANEL_BG, Visible = true };
+        var exHeader = new Panel { Dock = DockStyle.Top, Height = 28, BackColor = TITLEBAR };
+        exHeader.Controls.Add(new Label { Text = "  EXPLORER", Font = new Font("Segoe UI", 8f, FontStyle.Bold), ForeColor = DIM, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft });
+        explorerPanel.Controls.Add(exHeader);
+
+        explorerTree = new TreeView { Dock = DockStyle.Fill, BackColor = PANEL_BG, ForeColor = TEXT, Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.None, ShowLines = true, ShowPlusMinus = true, ShowRootLines = true, ItemHeight = 22, LineColor = BORDER };
+        explorerTree.NodeMouseDoubleClick += (s, e) =>
+        {
+            if (explorerTree.SelectedNode?.Tag is string filePath && File.Exists(filePath))
+            {
+                editor.Text = File.ReadAllText(filePath);
+                tabContents[activeTab] = editor.Text;
+                tabNames[activeTab] = Path.GetFileName(filePath);
+                RefreshTabs();
+            }
+        };
+        LoadExplorerTree();
+        explorerPanel.Controls.Add(explorerTree);
+
         // ═══ STATUS BAR ═══
-        var statusBar = new Panel { Dock = DockStyle.Bottom, Height = 26, BackColor = ACCENT, Padding = new Padding(10, 0, 10, 0) };
-        statusLeft = new Label { Text = "  Click 'Attach' to connect to Roblox", Font = new Font("Segoe UI", 8.5f), ForeColor = Color.White, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, Cursor = Cursors.Hand };
-        statusLeft.Click += (s, e) => Attach();
+        var statusBar = new Panel { Dock = DockStyle.Bottom, Height = 28, BackColor = SIDEBAR_BG, Padding = new Padding(10, 0, 10, 0) };
+        var attachBtn = new Button { Text = " Attach", Dock = DockStyle.Right, Width = 90, FlatStyle = FlatStyle.Flat, BackColor = ACCENT, ForeColor = Color.White, Font = new Font("Segoe UI", 8.5f, FontStyle.Bold), Cursor = Cursors.Hand };
+        attachBtn.FlatAppearance.BorderSize = 0;
+        attachBtn.Click += (s, e) => Attach();
+        statusBar.Controls.Add(attachBtn);
+        statusLeft = new Label { Text = "  Ready", Font = new Font("Segoe UI", 8f), ForeColor = DIM, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
         statusBar.Controls.Add(statusLeft);
-        var userIcon = new Label { Text = "\u263A", Font = new Font("Segoe UI", 9f), ForeColor = Color.White, Dock = DockStyle.Right, Width = 26, TextAlign = ContentAlignment.MiddleCenter };
-        statusBar.Controls.Add(userIcon);
-        statusRight = new Label { Text = "None", Font = new Font("Segoe UI", 8.5f), ForeColor = Color.White, Dock = DockStyle.Right, Width = 60, TextAlign = ContentAlignment.MiddleRight };
-        statusBar.Controls.Add(statusRight);
+        var autoLabel = new Label { Text = "Auto", Font = new Font("Segoe UI", 8f), ForeColor = GREEN, Dock = DockStyle.Right, Width = 40, TextAlign = ContentAlignment.MiddleCenter, Cursor = Cursors.Hand };
+        autoLabel.Click += (s, e) => { autoAttach = !autoAttach; autoLabel.ForeColor = autoAttach ? GREEN : RED; };
+        statusBar.Controls.Add(autoLabel);
 
         // ═══ BUTTON BAR ═══
-        var btnBar = new Panel { Dock = DockStyle.Bottom, Height = 44, BackColor = BG, Padding = new Padding(10, 8, 10, 8) };
+        var btnBar = new Panel { Dock = DockStyle.Bottom, Height = 38, BackColor = BG, Padding = new Padding(6, 6, 6, 6) };
 
-        var attachBtn = MakeBtn(" Attach", BTN_BG, BTN_BORDER);
-        attachBtn.Dock = DockStyle.Right;
-        attachBtn.Width = 100;
-        attachBtn.Click += (s, e) => Attach();
-        btnBar.Controls.Add(attachBtn);
+        var execBtn = MakeBtn(" Execute", GREEN, Color.FromArgb(0, 160, 60));
+        execBtn.Dock = DockStyle.Right;
+        execBtn.Width = 90;
+        execBtn.Click += (s, e) => Execute();
+        btnBar.Controls.Add(execBtn);
 
-        var saveBtn = MakeBtn(" Save", BTN_BG, BTN_BORDER);
-        saveBtn.Dock = DockStyle.Left;
-        saveBtn.Width = 70;
-        saveBtn.Click += (s, e) =>
-        {
-            using var sfd = new SaveFileDialog { Filter = "Lua (*.lua)|*.lua", DefaultExt = "lua" };
-            if (sfd.ShowDialog() == DialogResult.OK) File.WriteAllText(sfd.FileName, editor.Text);
-        };
-        btnBar.Controls.Add(saveBtn);
+        var clearBtn = MakeBtn(" Clear", BTN_BG, BORDER);
+        clearBtn.Dock = DockStyle.Right;
+        clearBtn.Width = 60;
+        clearBtn.Click += (s, e) => { editor.Clear(); editor.Focus(); };
+        btnBar.Controls.Add(clearBtn);
 
-        var openBtn = MakeBtn(" Open", BTN_BG, BTN_BORDER);
-        openBtn.Dock = DockStyle.Left;
-        openBtn.Width = 70;
+        var openBtn = MakeBtn(" Open", BTN_BG, BORDER);
+        openBtn.Dock = DockStyle.Right;
+        openBtn.Width = 60;
         openBtn.Click += (s, e) =>
         {
             using var ofd = new OpenFileDialog { Filter = "Lua (*.lua;*.txt)|*.lua;*.txt|All|*.*" };
@@ -133,27 +172,27 @@ class MainForm : Form
             {
                 editor.Text = File.ReadAllText(ofd.FileName);
                 tabContents[activeTab] = editor.Text;
+                tabNames[activeTab] = Path.GetFileName(ofd.FileName);
+                RefreshTabs();
             }
         };
         btnBar.Controls.Add(openBtn);
 
-        var clearBtn = MakeBtn(" Clear", BTN_BG, BTN_BORDER);
-        clearBtn.Dock = DockStyle.Left;
-        clearBtn.Width = 70;
-        clearBtn.Click += (s, e) => { editor.Clear(); editor.Focus(); };
-        btnBar.Controls.Add(clearBtn);
-
-        var execBtn = MakeBtn(" Execute", GREEN, Color.FromArgb(60, 140, 60));
-        execBtn.Dock = DockStyle.Left;
-        execBtn.Width = 90;
-        execBtn.Click += (s, e) => Execute();
-        btnBar.Controls.Add(execBtn);
+        var saveBtn = MakeBtn(" Save", BTN_BG, BORDER);
+        saveBtn.Dock = DockStyle.Right;
+        saveBtn.Width = 60;
+        saveBtn.Click += (s, e) =>
+        {
+            using var sfd = new SaveFileDialog { Filter = "Lua (*.lua)|*.lua", DefaultExt = "lua" };
+            if (sfd.ShowDialog() == DialogResult.OK) File.WriteAllText(sfd.FileName, editor.Text);
+        };
+        btnBar.Controls.Add(saveBtn);
 
         // ═══ OUTPUT ═══
-        outputPanel = new Panel { Dock = DockStyle.Bottom, Height = 100, BackColor = BG };
-        var outputHeader = new Panel { Dock = DockStyle.Top, Height = 22, BackColor = TITLEBAR, Cursor = Cursors.Hand };
-        var outputToggle = new Label { Text = "\u25B6 Output", Font = new Font("Segoe UI", 8f), ForeColor = DIM, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(8, 0, 0, 0), Cursor = Cursors.Hand };
-        outputToggle.Click += (s, e) => { outputPanel.Visible = !outputPanel.Visible; outputToggle.Text = outputPanel.Visible ? "\u25BC Output" : "\u25B6 Output"; };
+        outputPanel = new Panel { Dock = DockStyle.Bottom, Height = 90, BackColor = BG };
+        var outputHeader = new Panel { Dock = DockStyle.Top, Height = 20, BackColor = TITLEBAR, Cursor = Cursors.Hand };
+        var outputToggle = new Label { Text = "  Output", Font = new Font("Segoe UI", 7.5f), ForeColor = DIM, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, Cursor = Cursors.Hand };
+        outputToggle.Click += (s, e) => { outputPanel.Visible = !outputPanel.Visible; };
         outputHeader.Controls.Add(outputToggle);
         outputPanel.Controls.Add(outputHeader);
         outputBox = new RichTextBox { Dock = DockStyle.Fill, BackColor = BG, ForeColor = GREEN, Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.None, ReadOnly = true, ScrollBars = RichTextBoxScrollBars.Vertical };
@@ -164,7 +203,7 @@ class MainForm : Form
         {
             Dock = DockStyle.Fill,
             BackColor = EDITOR_BG,
-            ForeColor = Color.FromArgb(212, 212, 212),
+            ForeColor = TEXT,
             Font = new Font("Consolas", 10.5f),
             BorderStyle = BorderStyle.None,
             AcceptsTab = true,
@@ -176,42 +215,36 @@ class MainForm : Form
         editor.TextChanged += (s, e) => { if (activeTab >= 0 && activeTab < tabContents.Count) tabContents[activeTab] = editor.Text; };
         editor.KeyDown += (s, e) => { if (e.Control && e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; Execute(); } };
 
-        // ═══ SEARCH OVERLAY (hidden by default) ═══
-        searchOverlay = new Panel { Dock = DockStyle.Fill, BackColor = Color.FromArgb(180, 0, 0, 0), Visible = false, Enabled = false };
-        var searchBox = new Panel { Size = new Size(500, 420), BackColor = BG };
-        searchBox.Location = new Point((Width - 500) / 2, (Height - 420) / 2);
-        searchBox.Anchor = AnchorStyles.None;
-        var sHeader = new Panel { Dock = DockStyle.Top, Height = 36, BackColor = TITLEBAR };
-        searchInput = new TextBox { Dock = DockStyle.Fill, BackColor = Color.FromArgb(50, 50, 52), ForeColor = TEXT, Font = new Font("Segoe UI", 10f), BorderStyle = BorderStyle.None };
-        searchInput.PlaceholderText = "Search ScriptBlox...";
-        searchInput.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; DoSearch(); } };
-        sHeader.Controls.Add(searchInput);
-        var sClose = new Button { Text = "X", Dock = DockStyle.Right, Width = 34, FlatStyle = FlatStyle.Flat, BackColor = Color.Transparent, ForeColor = DIM, Font = new Font("Segoe UI", 9f) };
-        sClose.FlatAppearance.BorderSize = 0;
-        sClose.Click += (s, e) => ToggleSearch();
-        sHeader.Controls.Add(sClose);
-        searchResultsPanel = new Panel { Dock = DockStyle.Fill, BackColor = BG, AutoScroll = true, Padding = new Padding(4) };
-        searchBox.Controls.Add(searchResultsPanel);
-        searchBox.Controls.Add(sHeader);
-        searchOverlay.Controls.Add(searchBox);
-
-        // ═══ ASSEMBLE (docking order: fill first, then top/bottom) ═══
-        Controls.Add(searchOverlay);
+        // ═══ ASSEMBLE ═══
         Controls.Add(editor);
+        Controls.Add(explorerPanel);
         Controls.Add(outputPanel);
         Controls.Add(btnBar);
         Controls.Add(tabStrip);
         Controls.Add(statusBar);
+        Controls.Add(sidebar);
         Controls.Add(tb);
-
-        // Ensure search is hidden
-        searchOverlay.Visible = false;
-        searchOverlay.BringToFront();
 
         ResumeLayout(false);
         Log("KRUX Executor ready");
-        Log("Click 'Attach' to connect to Roblox");
+        Log("Auto-attach is ON — waiting for Roblox...");
+
+        // ═══ AUTO-ATTACH WATCHER ═══
+        attachWatcher = new System.Windows.Forms.Timer { Interval = 2000 };
+        attachWatcher.Tick += (s, e) =>
+        {
+            if (!autoAttach || attached) return;
+            var procs = Process.GetProcessesByName("RobloxPlayerBeta");
+            if (procs.Length > 0)
+            {
+                attachWatcher.Stop();
+                Attach();
+            }
+        };
+        attachWatcher.Start();
     }
+
+    Label statusLeft = null!;
 
     // ═══════════════════════════════════════════
     //  TABS
@@ -221,7 +254,6 @@ class MainForm : Form
         tabStrip.SuspendLayout();
         tabStrip.Controls.Clear();
 
-        // "+" button first (leftmost)
         var addTab = new Button
         {
             Text = "+",
@@ -244,7 +276,6 @@ class MainForm : Form
         };
         tabStrip.Controls.Add(addTab);
 
-        // Tabs (right to left for dock ordering)
         for (int i = tabNames.Count - 1; i >= 0; i--)
         {
             int idx = i;
@@ -252,15 +283,14 @@ class MainForm : Form
             {
                 Tag = idx,
                 Dock = DockStyle.Left,
-                Width = 140,
-                BackColor = idx == activeTab ? EDITOR_BG : TITLEBAR,
-                Cursor = Cursors.Hand,
-                Padding = new Padding(6, 0, 0, 0)
+                Width = 130,
+                BackColor = idx == activeTab ? TAB_ACTIVE : TITLEBAR,
+                Cursor = Cursors.Hand
             };
 
             var tabLabel = new Label
             {
-                Text = tabNames[idx],
+                Text = "  " + tabNames[idx],
                 Font = new Font("Segoe UI", 8.5f),
                 ForeColor = idx == activeTab ? TEXT : DIM,
                 Dock = DockStyle.Fill,
@@ -274,11 +304,11 @@ class MainForm : Form
             {
                 Text = "x",
                 Dock = DockStyle.Right,
-                Width = 24,
+                Width = 22,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.Transparent,
                 ForeColor = DIM,
-                Font = new Font("Segoe UI", 8f),
+                Font = new Font("Segoe UI", 7.5f),
                 Tag = idx,
                 Cursor = Cursors.Hand
             };
@@ -296,7 +326,6 @@ class MainForm : Form
     {
         if (sender is not Label lbl || lbl.Tag is not int idx) return;
         if (idx == activeTab) return;
-
         tabContents[activeTab] = editor.Text;
         activeTab = idx;
         editor.Text = tabContents[activeTab];
@@ -308,7 +337,6 @@ class MainForm : Form
     {
         if (sender is not Button btn || btn.Tag is not int idx) return;
         if (tabNames.Count <= 1) return;
-
         tabContents.RemoveAt(idx);
         tabNames.RemoveAt(idx);
         if (activeTab >= tabNames.Count) activeTab = tabNames.Count - 1;
@@ -317,91 +345,36 @@ class MainForm : Form
     }
 
     // ═══════════════════════════════════════════
-    //  SEARCH
+    //  EXPLORER
     // ═══════════════════════════════════════════
-    void ToggleSearch()
+    void ToggleExplorer()
     {
-        searchOverlay.Visible = !searchOverlay.Visible;
-        searchOverlay.Enabled = searchOverlay.Visible;
-        if (searchOverlay.Visible)
-        {
-            searchOverlay.BringToFront();
-            searchInput.Focus();
-        }
-        else
-        {
-            editor.Focus();
-        }
+        explorerPanel.Visible = !explorerPanel.Visible;
     }
 
-    async void DoSearch()
+    void LoadExplorerTree()
     {
-        string q = searchInput.Text.Trim();
-        if (string.IsNullOrEmpty(q)) return;
+        explorerTree.Nodes.Clear();
+        var root = new TreeNode("KRUX") { Tag = exeDir };
 
-        searchResultsPanel.Controls.Clear();
-        searchResultsPanel.Controls.Add(new Label { Text = "Loading...", Font = new Font("Segoe UI", 10f), ForeColor = DIM, Dock = DockStyle.Top, Height = 40, TextAlign = ContentAlignment.MiddleCenter });
+        var autoexec = Path.Combine(exeDir, "autoexec");
+        if (!Directory.Exists(autoexec)) Directory.CreateDirectory(autoexec);
+        var autoexecNode = new TreeNode("autoexec") { Tag = autoexec };
+        foreach (var f in Directory.GetFiles(autoexec, "*.lua"))
+            autoexecNode.Nodes.Add(new TreeNode(Path.GetFileName(f)) { Tag = f });
+        root.Nodes.Add(autoexecNode);
 
-        try
-        {
-            string url = $"https://scriptblox.com/api/script/search?mode=free&page=1&q={Uri.EscapeDataString(q)}";
-            using var http = new HttpClient();
-            http.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0");
-            var json = await http.GetStringAsync(url);
-            var doc = JsonDocument.Parse(json);
-            searchResultsPanel.Controls.Clear();
+        var scripts = Path.Combine(exeDir, "scripts");
+        if (!Directory.Exists(scripts)) Directory.CreateDirectory(scripts);
+        var scriptsNode = new TreeNode("scripts") { Tag = scripts };
+        foreach (var f in Directory.GetFiles(scripts, "*.lua"))
+            scriptsNode.Nodes.Add(new TreeNode(Path.GetFileName(f)) { Tag = f });
+        root.Nodes.Add(scriptsNode);
 
-            if (doc.RootElement.TryGetProperty("result", out var res) && res.TryGetProperty("scripts", out var scripts))
-            {
-                int y = 0;
-                foreach (var s in scripts.EnumerateArray())
-                {
-                    string title = s.TryGetProperty("title", out var tEl) ? tEl.GetString() ?? "" : "";
-                    string game = "";
-                    if (s.TryGetProperty("game", out var gEl))
-                    {
-                        if (gEl.ValueKind == JsonValueKind.String)
-                            game = gEl.GetString() ?? "";
-                        else if (gEl.ValueKind == JsonValueKind.Object && gEl.TryGetProperty("name", out var gName))
-                            game = gName.GetString() ?? "";
-                    }
-                    string scriptCode = s.TryGetProperty("script", out var scEl) ? scEl.GetString() ?? "" : "";
-
-                    var card = new Panel { Location = new Point(0, y), Size = new Size(searchResultsPanel.Width - 20, 52), BackColor = Color.FromArgb(40, 40, 43), Padding = new Padding(10, 6, 10, 6) };
-                    card.Controls.Add(new Label { Text = title.Length > 55 ? title[..55] + "..." : title, Font = new Font("Segoe UI", 9f, FontStyle.Bold), ForeColor = TEXT, Location = new Point(10, 4), AutoSize = true });
-                    card.Controls.Add(new Label { Text = game.Length > 50 ? game[..50] + "..." : game, Font = new Font("Segoe UI", 7.5f), ForeColor = DIM, Location = new Point(10, 24), AutoSize = true });
-
-                    string sc = scriptCode;
-                    string scriptTitle = title;
-                    var loadBtn = new Button { Text = "Load", Size = new Size(50, 22), FlatStyle = FlatStyle.Flat, BackColor = ACCENT, ForeColor = Color.White, Font = new Font("Segoe UI", 7.5f, FontStyle.Bold), Cursor = Cursors.Hand, Anchor = AnchorStyles.Top | AnchorStyles.Right };
-                    loadBtn.FlatAppearance.BorderSize = 0;
-                    loadBtn.Location = new Point(card.Width - 56, 14);
-                    loadBtn.Click += (ss, ee) =>
-                    {
-                        tabContents[activeTab] = sc;
-                        tabNames[activeTab] = scriptTitle.Length > 20 ? scriptTitle[..20] : scriptTitle;
-                        editor.Text = sc;
-                        editor.SelectionStart = 0;
-                        editor.SelectionLength = 0;
-                        editor.Focus();
-                        RefreshTabs();
-                        ToggleSearch();
-                    };
-                    card.Controls.Add(loadBtn);
-
-                    searchResultsPanel.Controls.Add(card);
-                    y += 56;
-                }
-            }
-
-            if (searchResultsPanel.Controls.Count == 0)
-                searchResultsPanel.Controls.Add(new Label { Text = "No results", Font = new Font("Segoe UI", 10f), ForeColor = DIM, Dock = DockStyle.Top, Height = 40, TextAlign = ContentAlignment.MiddleCenter });
-        }
-        catch (Exception ex)
-        {
-            searchResultsPanel.Controls.Clear();
-            searchResultsPanel.Controls.Add(new Label { Text = $"Error: {ex.Message}", Font = new Font("Segoe UI", 9f), ForeColor = RED, Dock = DockStyle.Top, Height = 40, TextAlign = ContentAlignment.MiddleCenter });
-        }
+        root.Expand();
+        autoexecNode.Expand();
+        scriptsNode.Expand();
+        explorerTree.Nodes.Add(root);
     }
 
     // ═══════════════════════════════════════════
@@ -412,7 +385,7 @@ class MainForm : Form
         statusLeft.Text = "  Searching for Roblox...";
         var procs = Process.GetProcessesByName("RobloxPlayerBeta");
         if (procs.Length == 0) procs = Process.GetProcesses().Where(p => p.ProcessName.ToLower().Contains("roblox")).ToArray();
-        if (procs.Length == 0) { statusLeft.Text = "  Roblox not found"; Log("Roblox not found"); return; }
+        if (procs.Length == 0) { statusLeft.Text = "  Roblox not found"; Log("Roblox not found — waiting..."); attachWatcher?.Start(); return; }
 
         var proc = procs[0];
         statusLeft.Text = $"  Injecting PID {proc.Id}...";
@@ -426,12 +399,19 @@ class MainForm : Form
             await Task.Run(() => InjectDLL(proc.Id, dllPath));
             await Task.Delay(1000);
             attached = true;
-            statusLeft.Text = "  Attached - Ready";
-            statusRight.Text = "Ready";
-            Log("Injected successfully");
+            statusDot.ForeColor = GREEN;
+            statusText.Text = "Attached";
+            statusText.ForeColor = GREEN;
+            statusLeft.Text = "  Attached to Roblox";
+            Log("Attached successfully!");
+            Log("You can now execute scripts.");
             _ = PipeListener();
         }
-        catch (Exception ex) { statusLeft.Text = "  Failed"; Log($"Inject failed: {ex.Message}"); }
+        catch (Exception ex)
+        {
+            statusLeft.Text = "  Attach failed";
+            Log($"Inject failed: {ex.Message}");
+        }
     }
 
     void InjectDLL(int pid, string dllPath)
@@ -456,7 +436,7 @@ class MainForm : Form
             {
                 await using var server = new NamedPipeServerStream("KruxExecutor", PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
                 await server.WaitForConnectionAsync();
-                Log("Client connected");
+                Log("DLL connected via pipe");
                 using var reader = new StreamReader(server, Encoding.UTF8);
                 while (server.IsConnected) { var line = await reader.ReadLineAsync(); if (line == null) break; Log(line); }
             }
@@ -493,7 +473,7 @@ class MainForm : Form
 
     Button MakeBtn(string text, Color bg, Color border)
     {
-        var b = new Button { Text = text, FlatStyle = FlatStyle.Flat, BackColor = bg, ForeColor = TEXT, Font = new Font("Segoe UI", 8.5f), Cursor = Cursors.Hand, Margin = new Padding(4, 0, 4, 0) };
+        var b = new Button { Text = text, FlatStyle = FlatStyle.Flat, BackColor = bg, ForeColor = TEXT, Font = new Font("Segoe UI", 8f), Cursor = Cursors.Hand };
         b.FlatAppearance.BorderColor = border;
         b.FlatAppearance.BorderSize = 1;
         b.MouseEnter += (s, e) => b.BackColor = ControlPaint.Light(bg, 0.1f);
