@@ -1,17 +1,5 @@
-#Requires -Version 5.1
-<#
-.SYNOPSIS
-    KRUX Executor Installer
-.DESCRIPTION
-    Downloads and installs KRUX Executor to your system.
-    Style inspired by Opiumware installer by @norbyv1.
-.NOTES
-    Developed by Kruz2Cold
-#>
-
 $ErrorActionPreference = 'Stop'
 
-# ── Colors & Symbols ──────────────────────────────────────────────────────────
 $ESC = [char]27
 $RED    = "${ESC}[91m"
 $GREEN  = "${ESC}[92m"
@@ -24,13 +12,11 @@ $NC     = "${ESC}[0m"
 $CHECK = "${GREEN}[+]${NC}"
 $CROSS = "${RED}[-]${NC}"
 $INFO  = "${CYAN}[~]${NC}"
-$WARN  = "${YELLOW}[!]${NC}"
 
 $REPO   = "kairoooo-dev/krux-executor"
 $INSTALL_DIR = "$env:LOCALAPPDATA\KRUX"
 $EXE_NAME    = "KruxExecutor.exe"
 
-# ── Functions ─────────────────────────────────────────────────────────────────
 function Write-Section {
     param([string]$Message)
     Write-Host ""
@@ -38,10 +24,7 @@ function Write-Section {
 }
 
 function Write-Step {
-    param(
-        [string]$Message,
-        [scriptblock]$Action
-    )
+    param([string]$Message, [scriptblock]$Action)
     Write-Host -NoNewline "${CYAN}[...]${NC} $Message`r"
     try {
         & $Action | Out-Null
@@ -55,60 +38,21 @@ function Write-Step {
 
 function Show-Banner {
     Clear-Host
-    $logoUrl = "https://raw.githubusercontent.com/kairoooo-dev/krux-executor/master/gui-dotnet/KruxLogo.jpg"
-    $tmpLogo = Join-Path $env:TEMP "krux_logo_$([System.IO.Path]::GetRandomFileName()).jpg"
-    try {
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        $wc = New-Object System.Net.WebClient
-        $wc.Headers.Add("User-Agent", "KRUX-Installer/1.0")
-        $wc.DownloadFile($logoUrl, $tmpLogo)
-
-        Add-Type -AssemblyName System.Drawing
-        $img = [System.Drawing.Bitmap]::FromFile($tmpLogo)
-        $width = 60
-        $height = [math]::Floor($img.Height * ($width / $img.Width) * 0.45)
-        $resized = New-Object System.Drawing.Bitmap($img, $width, $height)
-
-        $chars = @(' ', '.', ':', '-', '=', '+', '*', '#', '%', '@')
-        Write-Host ""
-        for ($y = 0; $y -lt $resized.Height; $y++) {
-            $line = ""
-            for ($x = 0; $x -lt $resized.Width; $x++) {
-                $px = $resized.GetPixel($x, $y)
-                $r = $px.R; $g = $px.G; $b = $px.B
-                $brightness = ($r + $g + $b) / 3
-                $idx = [math]::Min([math]::Floor($brightness / 25.6), 9)
-                $ch = $chars[$idx]
-                if ($ch -eq ' ') {
-                    $line += " "
-                } else {
-                    $line += "${ESC}[38;2;${r};${g};${b}m${ch}${NC}"
-                }
-            }
-            Write-Host $line
-        }
-        $resized.Dispose()
-        $img.Dispose()
-    } catch {
-        Write-Host "${BOLD}${CYAN}"
-        @'
-
-     .:#%@@@%#:.
-     %@       @%
-     @%  %@%  %@
-     @%  %@%  %@
-     %@       @%
-     ':%#%@%@#%:'
-
-     K R U X
-
-'@ | Write-Host
-    } finally {
-        if (Test-Path $tmpLogo) { Remove-Item -Path $tmpLogo -Force -ErrorAction SilentlyContinue }
-    }
-    Write-Host "${NC}"
-    Write-Host "${BLUE}=[ KRUX Executor Installer ]=${NC}"
-    Write-Host "${CYAN}Developed by Kruz2Cold${NC}"
+    Write-Host ""
+    Write-Host "${BOLD}${CYAN}  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
+    Write-Host "${BOLD}${CYAN}  @#%@@@@@@%##%%%%%%%%%%%%%%##########%%%%%%%%%%@@@@# @${NC}"
+    Write-Host "${BOLD}${CYAN}  @#%@      *@%            *%@%        .%@%      #@# @${NC}"
+    Write-Host "${BOLD}${CYAN}  @#%@  *%@  *@%  %@@%%%@  *%@%  @@@@@  %@%  *%@ #@# @${NC}"
+    Write-Host "${BOLD}${CYAN}  @#%@  %@@@  *@%  %@%      *%@%  %@%  .%@%  %@@@ #@# @${NC}"
+    Write-Host "${BOLD}${CYAN}  @#%@  *%@  *@%  %@@%%%@  *%@%  @@@@@  %@%  *%@ #@# @${NC}"
+    Write-Host "${BOLD}${CYAN}  @#%@      *@%            *%@%        .%@%      #@# @${NC}"
+    Write-Host "${BOLD}${CYAN}  @#%@@@@@@%##%%%%%%%%%%%%%%##########%%%%%%%%%%@@@@# @${NC}"
+    Write-Host "${BOLD}${CYAN}  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@${NC}"
+    Write-Host ""
+    Write-Host "${BOLD}${CYAN}       ##%%@@%%##  K R U X  ##%%@@%%##${NC}"
+    Write-Host ""
+    Write-Host "${BLUE}  = [ KRUX Executor Installer ] =${NC}"
+    Write-Host "${CYAN}  Developed by Kruz2Cold${NC}"
     Write-Host ""
 }
 
@@ -121,7 +65,7 @@ function Get-LatestRelease {
         $asset = $release.assets | Where-Object { $_.name -like "*.exe" } | Select-Object -First 1
         if (-not $asset) {
             Write-Host "`r${CROSS} No executable found in latest release${NC}    "
-            Write-Host "${YELLOW}Go to: https://github.com/$REPO/releases${NC}"
+            Write-Host "${YELLOW}Download manually: https://github.com/$REPO/releases${NC}"
             exit 1
         }
         Write-Host "`r${CHECK} Latest release: $($release.tag_name)${NC}    "
@@ -129,104 +73,78 @@ function Get-LatestRelease {
     } catch {
         Write-Host "`r${CROSS} Failed to fetch release${NC}    "
         Write-Host "${RED}Error: $($_.Exception.Message)${NC}"
-        Write-Host "${YELLOW}Go to: https://github.com/$REPO/releases${NC}"
+        Write-Host "${YELLOW}Download manually: https://github.com/$REPO/releases${NC}"
         exit 1
     }
 }
 
-# ── Main ──────────────────────────────────────────────────────────────────────
-function Main {
-    Show-Banner
+# ═══ MAIN ═══
+Show-Banner
 
-    # ── Check admin (optional) ────────────────────────────────────────────
-    $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-    if ($isAdmin) {
-        Write-Host "${INFO} Running as Administrator"
-    }
-
-    # ── Kill running processes ────────────────────────────────────────────
-    Write-Section "Preparing system"
-    Write-Step "Stopping KRUX processes" {
-        Get-Process -Name "KruxExecutor" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Milliseconds 200
-    }
-
-    Write-Step "Stopping Roblox processes" {
-        Get-Process -Name "RobloxPlayerBeta" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Milliseconds 200
-    }
-
-    # ── Remove old install ────────────────────────────────────────────────
-    Write-Section "Removing old installation"
-    if (Test-Path $INSTALL_DIR) {
-        Write-Step "Removing $INSTALL_DIR" {
-            Remove-Item -Path $INSTALL_DIR -Recurse -Force -ErrorAction Stop
-        }
-    } else {
-        Write-Host "${INFO} No previous installation found"
-    }
-
-    # ── Fetch latest release ──────────────────────────────────────────────
-    Write-Section "Fetching latest release"
-    $release = Get-LatestRelease
-
-    # ── Download ──────────────────────────────────────────────────────────
-    Write-Section "Downloading KRUX Executor"
-    $tempFile = Join-Path $env:TEMP "KruxExecutor_$([System.IO.Path]::GetRandomFileName()).exe"
-
-    Write-Step "Downloading $($release.Name)" {
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        $wc = New-Object System.Net.WebClient
-        $wc.Headers.Add("User-Agent", "KRUX-Installer/1.0")
-        $wc.DownloadFile($release.Url, $tempFile)
-    }
-
-    # ── Verify download ──────────────────────────────────────────────────
-    Write-Step "Verifying download" {
-        if (-not (Test-Path $tempFile)) { throw "Downloaded file not found" }
-        $size = (Get-Item $tempFile).Length
-        if ($size -lt 1MB) { throw "File too small ($size bytes), download may be corrupt" }
-    }
-
-    # ── Install ───────────────────────────────────────────────────────────
-    Write-Section "Installing KRUX Executor"
-    New-Item -ItemType Directory -Path $INSTALL_DIR -Force | Out-Null
-
-    Write-Step "Copying executor to $INSTALL_DIR" {
-        Copy-Item -Path $tempFile -Destination "$INSTALL_DIR\$EXE_NAME" -Force
-    }
-
-    Write-Step "Cleaning up temp files" {
-        Remove-Item -Path $tempFile -Force -ErrorAction SilentlyContinue
-    }
-
-    # ── Create start menu shortcut ────────────────────────────────────────
-    Write-Step "Creating shortcut" {
-        $shortcutPath = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\KRUX Executor.lnk"
-        $shell = New-Object -ComObject WScript.Shell
-        $shortcut = $shell.CreateShortcut($shortcutPath)
-        $shortcut.TargetPath = "$INSTALL_DIR\$EXE_NAME"
-        $shortcut.WorkingDirectory = $INSTALL_DIR
-        $shortcut.Description = "KRUX Executor - Modern Roblox Executor"
-        $shortcut.Save()
-    }
-
-    # ── Done ──────────────────────────────────────────────────────────────
-    Write-Host ""
-    Write-Host "${GREEN}${BOLD}Installation complete!${NC}"
-    Write-Host ""
-    Write-Host "${INFO} Installed to: ${BOLD}$INSTALL_DIR\$EXE_NAME${NC}"
-    Write-Host "${INFO} Start Menu:   ${BOLD}KRUX Executor${NC}"
-    Write-Host ""
-
-    # ── Launch ────────────────────────────────────────────────────────────
-    $launch = Read-Host "${CYAN}Launch KRUX now? [Y/n]${NC}"
-    if ($launch -ne 'n' -and $launch -ne 'N') {
-        Write-Host "${INFO} Starting KRUX Executor..."
-        Start-Process -FilePath "$INSTALL_DIR\$EXE_NAME"
-    } else {
-        Write-Host "${INFO} Run ${BOLD}$INSTALL_DIR\$EXE_NAME${NC} to start."
-    }
+Write-Section "Preparing system"
+Write-Step "Stopping KRUX processes" {
+    Get-Process -Name "KruxExecutor" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 200
+}
+Write-Step "Stopping Roblox processes" {
+    Get-Process -Name "RobloxPlayerBeta" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 200
 }
 
-Main
+Write-Section "Removing old installation"
+if (Test-Path $INSTALL_DIR) {
+    Write-Step "Removing $INSTALL_DIR" {
+        Remove-Item -Path $INSTALL_DIR -Recurse -Force
+    }
+} else {
+    Write-Host "${INFO} No previous installation found"
+}
+
+Write-Section "Fetching latest release"
+$release = Get-LatestRelease
+
+Write-Section "Downloading KRUX Executor"
+$tempFile = Join-Path $env:TEMP "KruxExecutor_$([System.IO.Path]::GetRandomFileName()).exe"
+Write-Step "Downloading $($release.Name)" {
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    $wc = New-Object System.Net.WebClient
+    $wc.Headers.Add("User-Agent", "KRUX-Installer/1.0")
+    $wc.DownloadFile($release.Url, $tempFile)
+}
+Write-Step "Verifying download" {
+    if (-not (Test-Path $tempFile)) { throw "File not found after download" }
+    $size = (Get-Item $tempFile).Length
+    if ($size -lt 1MB) { throw "File too small ($size bytes)" }
+}
+
+Write-Section "Installing KRUX Executor"
+New-Item -ItemType Directory -Path $INSTALL_DIR -Force | Out-Null
+Write-Step "Copying executor" {
+    Copy-Item -Path $tempFile -Destination "$INSTALL_DIR\$EXE_NAME" -Force
+}
+Write-Step "Cleaning up" {
+    Remove-Item -Path $tempFile -Force -ErrorAction SilentlyContinue
+}
+Write-Step "Creating shortcut" {
+    $shortcutPath = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\KRUX Executor.lnk"
+    $shell = New-Object -ComObject WScript.Shell
+    $shortcut = $shell.CreateShortcut($shortcutPath)
+    $shortcut.TargetPath = "$INSTALL_DIR\$EXE_NAME"
+    $shortcut.WorkingDirectory = $INSTALL_DIR
+    $shortcut.Description = "KRUX Executor"
+    $shortcut.Save()
+}
+
+Write-Host ""
+Write-Host "${GREEN}${BOLD}  Installation complete!${NC}"
+Write-Host ""
+Write-Host "${INFO} Installed to: ${BOLD}$INSTALL_DIR\$EXE_NAME${NC}"
+Write-Host ""
+
+$launch = Read-Host "${CYAN}  Launch KRUX now? [Y/n]${NC}"
+if ($launch -ne 'n' -and $launch -ne 'N') {
+    Write-Host "${INFO} Starting KRUX..."
+    Start-Process -FilePath "$INSTALL_DIR\$EXE_NAME"
+} else {
+    Write-Host "${INFO} Run ${BOLD}$INSTALL_DIR\$EXE_NAME${NC} to start."
+}
