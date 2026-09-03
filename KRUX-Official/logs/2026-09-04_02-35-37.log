@@ -1,0 +1,12 @@
+[2026-09-04 02:35:37.325] [Xeno] [trace] Xeno is only maintained by Rizve. If you find any bugs, have any question, or just want to chat email me rizve@xeno.onl or DM me on Discord: .rizve
+[2026-09-04 02:35:37.325] [Xeno] [info] Version: Xeno - v1.3.60
+[2026-09-04 02:35:37.325] [Xeno] [info] Log file: C:\KRUX\logs\2026-09-04_02-35-37.log
+[2026-09-04 02:35:37.328] [Xeno] [debug] Client Checker thread: 0xa46d57d8b0
+[2026-09-04 02:35:37.328] [Xeno] [debug] Xeno Caching thread: 0xa46d57d8a0
+[2026-09-04 02:35:37.328] [Xeno] [debug] WebSockets Cleaner thread: 0xa46d57d890
+[2026-09-04 02:35:37.328] [Xeno] [debug] Xeno Server thread: 0xa46d57d880
+[2026-09-04 02:35:37.328] [Cache] [info] Caching file: C:\Users\Admin\AppData\Local\Xeno\XENO_CACHE.bin
+[2026-09-04 02:35:37.333] [Server] [info] Xeno Server is Live on http://localhost:3110
+[2026-09-04 02:35:37.333] [Server] [info] Visit http://localhost:3110 to view any additional information
+[2026-09-04 02:35:37.340] [DiscordRPC] [info] RPC is Enabled
+[2026-09-04 02:35:39.398] [DiscordRPC] [info] Connected to kruz4l, userId: 1349361903717318786
