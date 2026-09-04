@@ -100,6 +100,37 @@ if (Test-Path $compatSrc) {
 
 Write-Host "${GREEN}[+] Extracted to $d${NC}"
 
+
+
+# License activation (offline RSA check, key from Discord/admin)
+$modB64 = "rAQjwctuyoc6eSGdxmTNs1xyIWwXGgx2gWoFl+kspuAt5uXMC6c42u7VON4TqFxwHYju/9kkv/W36/V2FZQuuI/qwp7+3TGaGMNHcQhBkHflYpMWO6ajXrgbtvVQMwkPDPAhd3BwZgGC3mU8fTk1kVmYhyf+3RsSuLo9KEcVXrPKtpxbCgW12lfGOyowXNxDq+wcFGkTBBB9HssGWEONBAXMf1+fOSnzkicWO1itm1/zrQwt4js7u+j9plOzLEbDyjvzCNZmUIxc86i9DQPzOTlheri35Q2UFTEqjClvUt9dlrxH2tGs6mX+vcoeF9jHJZBxtqIJbZsUJUPw7rT0aQ=="
+$expB64 = "AQAB"
+function Test-KruxLicense {
+    param([string]$Key)
+    try {
+        $p = $Key.Trim().Split('.')
+        if ($p.Count -ne 4 -or $p[0] -ne 'KRUX1') { return $false }
+        $rsa = New-Object System.Security.Cryptography.RSACryptoServiceProvider
+        $rp = New-Object System.Security.Cryptography.RSAParameters
+        $rp.Modulus = [Convert]::FromBase64String($modB64)
+        $rp.Exponent = [Convert]::FromBase64String($expB64)
+        $rsa.ImportParameters($rp)
+        $data = [Text.Encoding]::ASCII.GetBytes($p[1] + '.' + $p[2])
+        if (-not $rsa.VerifyData($data, "SHA256", [Convert]::FromBase64String($p[3]))) { return $false }
+        return [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() -lt [long]$p[2]
+    } catch { return $false }
+}
+Write-Host ""
+do {
+    $lkey = Read-Host "License key (get one in Discord)"
+    if (Test-KruxLicense $lkey) {
+        Set-Content -Path (Join-Path $d 'license.dat') -Value $lkey.Trim() -NoNewline -Encoding Ascii
+        Write-Host "${GREEN}[+] License activated${NC}"
+        break
+    }
+    Write-Host "${RED}[-] Invalid or expired key, try again${NC}"
+} while ($true)
+
 # Desktop shortcut
 $shell = New-Object -ComObject WScript.Shell
 $lnk = $shell.CreateShortcut("$([Environment]::GetFolderPath('Desktop'))\KRUX Executor.lnk")
