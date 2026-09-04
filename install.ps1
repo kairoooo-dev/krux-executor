@@ -88,9 +88,15 @@ Write-Host "${CYAN}[~]${NC} Extracting..."
 Expand-Archive -Path $zipPath -DestinationPath $d -Force
 Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
 
-# Remove editor folder if extracted (not needed)
-$editorDir = Join-Path $d "editor"
-if (Test-Path $editorDir) { Remove-Item $editorDir -Recurse -Force -ErrorAction SilentlyContinue }
+# Deploy UNC compat layer to Xeno autoexec (runs on every attach)
+$compatSrc = Join-Path $d "00_krux_compat.lua"
+if (Test-Path $compatSrc) {
+    $axDir = Join-Path $env:LOCALAPPDATA "Xeno\autoexec"
+    New-Item -ItemType Directory -Path $axDir -Force | Out-Null
+    Copy-Item $compatSrc (Join-Path $axDir "00_krux_compat.lua") -Force
+    Remove-Item $compatSrc -Force -ErrorAction SilentlyContinue
+    Write-Host "${GREEN}[+] UNC compat layer deployed${NC}"
+}
 
 Write-Host "${GREEN}[+] Extracted to $d${NC}"
 
